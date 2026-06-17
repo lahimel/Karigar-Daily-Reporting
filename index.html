@@ -427,20 +427,27 @@ function detectFields(){
 //                      DurationColumns = List.Select(..., Text.StartsWith(_, "Approx. Duration"))
 function discoverActivityCols(){
   const norm=k=>k.toLowerCase().replace(/[^a-z0-9]/g,'');
+  const numSuffix=k=>{const m=k.match(/(\d+)$/);return m?parseInt(m[1]):0;};
+
+  // Very broad: catch any field name containing activity+task, or task+done
   actCols=allKeys
-    .filter(k=>k.startsWith('Activity/Task Done')||k.startsWith('Activity_Task_Done')||norm(k).startsWith('activitytaskdone'))
-    .sort((a,b)=>{
-      const na=a==='Activity/Task Done'?0:parseInt(a.match(/(\d+)$/)?.[1]??999);
-      const nb=b==='Activity/Task Done'?0:parseInt(b.match(/(\d+)$/)?.[1]??999);
-      return na-nb;
-    });
+    .filter(k=>{
+      const n=norm(k);
+      return n.startsWith('activitytaskdone')||n.startsWith('activitytask')||
+             (n.includes('activity')&&n.includes('task'))||
+             (n.includes('task')&&n.includes('done'));
+    })
+    .sort((a,b)=>numSuffix(a)-numSuffix(b));
+
+  // Very broad: catch any field containing "duration" OR approx+min OR ends with mins
   durCols=allKeys
-    .filter(k=>k.startsWith('Approx. Duration')||k.startsWith('Approx_Duration')||norm(k).startsWith('approxduration'))
-    .sort((a,b)=>{
-      const na=a==='Approx. Duration (mins)'?0:parseInt(a.match(/(\d+)$/)?.[1]??999);
-      const nb=b==='Approx. Duration (mins)'?0:parseInt(b.match(/(\d+)$/)?.[1]??999);
-      return na-nb;
-    });
+    .filter(k=>{
+      const n=norm(k);
+      return n.includes('duration')||
+             (n.includes('approx')&&n.includes('min'))||
+             n.endsWith('mins')||n.endsWith('minutes');
+    })
+    .sort((a,b)=>numSuffix(a)-numSuffix(b));
 }
 
 // ── Activities from one record (mirrors Power Query logic) ─
@@ -473,10 +480,11 @@ function totalMins(data){
   let t=0;
   data.forEach(rec=>{
     durCols.forEach(col=>{
-      const v=parseFloat(rec[col]);
-      // DAX: Activities[Approx. Duration (mins)] > 0
-      // Power Query replaced 15120 with 1440, so we cap at 1440 mins = 24h
-      if(!isNaN(v)&&v>0&&v<=1440)t+=v;
+      let v=parseFloat(rec[col]);
+      if(isNaN(v)||v<=0)return;
+      // Mirror Power Query: replace values > 1440 (e.g. erroneous 15120) with 1440
+      if(v>1440)v=1440;
+      t+=v;
     });
   });
   return t;
@@ -781,7 +789,24 @@ function doDownload(){
 function setupCfg(){
   const vis=allKeys.filter(k=>!k.startsWith('_')||k==='_submission_time');
   document.getElementById('cfgFields').textContent=vis.join(', ');
+
+  // Show detected activity & duration columns for debugging
+  const actInfo = actCols.length
+    ? '✓ Activity cols ('+actCols.length+'): '+actCols.join(', ')
+    : '✗ No activity columns detected — hours will show —';
+  const durInfo = durCols.length
+    ? '✓ Duration cols ('+durCols.length+'): '+durCols.join(', ')
+    : '✗ No duration columns detected — hours will show —';
+
   document.getElementById('cfgGrid').innerHTML=
+    `<div class="cfgf" style="grid-column:1/-1">
+       <label>Detected Activity Columns</label>
+       <div style="font-size:11px;font-family:var(--mono);background:var(--bg);border:1px solid var(--b);border-radius:6px;padding:6px 10px;color:${actCols.length?'#16A34A':'#c0392b'};word-break:break-all">${actInfo}</div>
+     </div>
+     <div class="cfgf" style="grid-column:1/-1">
+       <label>Detected Duration Columns</label>
+       <div style="font-size:11px;font-family:var(--mono);background:var(--bg);border:1px solid var(--b);border-radius:6px;padding:6px 10px;color:${durCols.length?'#16A34A':'#c0392b'};word-break:break-all">${durInfo}</div>
+     </div>`+
     Object.entries({name:'Staff Name',date:'Date',lab:'Select Lab',workType:'Working Type',
                      sessions:'Number of Sessions',courses:'Course(s)',kra:'KRA Bucket Field'})
     .map(([t,l])=>`<div class="cfgf"><label>${l}</label><select id="cfg_${t}"><option value="">— not set —</option>${allKeys.map(k=>`<option value="${esc(k)}"${fieldMap[t]===k?' selected':''}>${esc(k)}</option>`).join('')}</select></div>`).join('');
