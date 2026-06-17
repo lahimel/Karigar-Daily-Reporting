@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Daily Report — Karigar</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -314,6 +315,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 
 <script>
 // ── identical fetch pattern to Karigar Batch Tracker ──────
+Chart.register(ChartDataLabels);
 const PROXY  = 'https://corsproxy.io/?';
 const SERVER = 'https://eu.kobotoolbox.org';
 const TOKEN  = 'be8d9189ac085ed0345b12ee0ae622d4e93b3ba0';
@@ -593,7 +595,19 @@ function renderCharts(d){
       type:'doughnut',
       data:{labels:pL,datasets:[{data:pD,backgroundColor:pC,borderWidth:2,borderColor:'#fff',hoverOffset:4}]},
       options:{responsive:true,maintainAspectRatio:false,cutout:'55%',
-        plugins:{legend:{position:'bottom',labels:{boxWidth:10,padding:10,font:{size:10}}}}}
+        plugins:{
+          legend:{position:'bottom',labels:{boxWidth:10,padding:10,font:{size:10}}},
+          datalabels:{
+            display:ctx=>ctx.dataset.data[ctx.dataIndex]>0,
+            formatter:value=>value,
+            color:'#fff',
+            font:{weight:'700',size:11},
+            textAlign:'center',
+            textShadowBlur:4,
+            textShadowColor:'rgba(0,0,0,.4)'
+          }
+        }
+      }
     });
   }
 
@@ -615,10 +629,20 @@ function renderCharts(d){
       type:'bar',
       data:{labels:bL,datasets:[{data:bD,backgroundColor:'#4F46E5',borderRadius:3,barThickness:18}]},
       options:{
-        indexAxis:'y',   // ← horizontal bars, matches Power BI
+        indexAxis:'y',
         responsive:true,maintainAspectRatio:false,
-        plugins:{legend:{display:false},
-          tooltip:{callbacks:{title:items=>[bL[items[0].dataIndex]]}}},
+        layout:{padding:{right:32}},
+        plugins:{
+          legend:{display:false},
+          tooltip:{callbacks:{title:items=>[bL[items[0].dataIndex]]}},
+          datalabels:{
+            anchor:'end',
+            align:'end',
+            formatter:value=>value,
+            color:'#475569',
+            font:{weight:'700',size:11}
+          }
+        },
         scales:{
           x:{beginAtZero:true,ticks:{stepSize:1,font:{size:10}},
              grid:{color:'#F1F5F9'},title:{display:true,text:'KRA Count',font:{size:10},color:'#94A3B8'}},
