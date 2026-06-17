@@ -269,7 +269,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
       <div class="tw">
         <table class="dt">
           <thead><tr>
-            <th>Date</th><th>Course(s)</th><th>Other Course</th><th>Select Lab</th><th>Working Type</th><th style="text-align:right">Sessions</th>
+            <th>Date</th><th>Staff Name</th><th>Course(s)</th><th>Other Course Name</th><th>Select Lab</th><th style="text-align:right">Total Submissions</th><th style="text-align:right">Active Work Days</th><th style="text-align:right">Total Sessions</th>
           </tr></thead>
           <tbody id="tSC"></tbody>
         </table>
@@ -732,33 +732,50 @@ function renderTables(records, activities) {
   const sortedRec = [...records].sort((a, b) => parseD(String(gv(b, fieldMap.date)||'')).localeCompare(parseD(String(gv(a, fieldMap.date)||''))));
   const sortedAct = [...activities].sort((a, b) => parseD(b.date).localeCompare(parseD(a.date)));
 
-  // ── Sessions & Courses (one row per submission) ───────────
+  // ── Sessions & Courses — columns matching Power BI exactly ──
+  // Date | Staff Name | Course(s) | Other Course Name | Select Lab | Total Submissions | Active Work Days | Total Sessions
   const sb = document.getElementById('tSC');
   set('scCnt', sortedRec.length + ' rows');
-  let totalSes = 0;
+  let sumSubmissions = 0, sumActiveDays = 0, sumSessions = 0;
   const scRows = sortedRec.map(r => {
+    const dt    = fmtDate(String(gv(r, fieldMap.date) || ''));
+    const staff = currentUser;
     const crs   = String(gv(r, fieldMap.courses)     || '—');
-    const other = String(gv(r, fieldMap.otherCourse) || '—');
+    const other = String(gv(r, fieldMap.otherCourse) || '');
     const lab   = String(gv(r, fieldMap.lab)         || '—');
-    const wt    = String(gv(r, fieldMap.workType)    || '—');
+    const wt    = String(gv(r, fieldMap.workType)    || '').toLowerCase();
     const sesV  = parseFloat(gv(r, fieldMap.sessions));
-    const ses   = !isNaN(sesV) && sesV > 0 ? sesV : '—';
-    if (!isNaN(sesV) && sesV > 0) totalSes += sesV;
+    const ses   = !isNaN(sesV) && sesV > 0 ? sesV : 0;
+    // Total Submissions: always 1 per row (one submission per record)
+    const totalSub = 1;
+    // Active Work Days: 1 if Working Type is Lab or Field
+    const activeDay = (wt === 'lab' || wt === 'field') ? 1 : 0;
+    sumSubmissions += totalSub;
+    sumActiveDays  += activeDay;
+    sumSessions    += ses;
+    const dash = '<span style="color:var(--faint)">—</span>';
     return `<tr>
-      <td style="white-space:nowrap">${esc(fmtDate(String(gv(r, fieldMap.date)||'')))}</td>
+      <td style="white-space:nowrap">${esc(dt)}</td>
+      <td>${esc(staff)}</td>
       <td>${esc(crs)}</td>
-      <td>${other === '—' ? '<span style="color:var(--faint)">—</span>' : esc(other)}</td>
-      <td>${lab === '—' ? '<span style="color:var(--faint)">—</span>' : esc(lab)}</td>
-      <td>${wtBadge(wt)}</td>
-      <td style="text-align:right">${esc(String(ses))}</td>
+      <td>${other ? esc(other) : dash}</td>
+      <td>${lab === '—' ? dash : esc(lab)}</td>
+      <td style="text-align:right">${totalSub}</td>
+      <td style="text-align:right">${activeDay}</td>
+      <td style="text-align:right">${ses || dash}</td>
     </tr>`;
   });
+  // Total row — sums all three numeric columns
   const scTotal = sortedRec.length
     ? `<tr style="font-weight:700;border-top:2px solid var(--b2)">
         <td colspan="5" style="padding:8px 12px">Total</td>
-        <td style="text-align:right;padding:8px 12px">${totalSes || '—'}</td>
+        <td style="text-align:right;padding:8px 12px">${sumSubmissions}</td>
+        <td style="text-align:right;padding:8px 12px">${sumActiveDays}</td>
+        <td style="text-align:right;padding:8px 12px">${sumSessions || '—'}</td>
        </tr>` : '';
-  sb.innerHTML = sortedRec.length ? scRows.join('') + scTotal : `<tr><td colspan="6" class="empty">No data</td></tr>`;
+  sb.innerHTML = sortedRec.length
+    ? scRows.join('') + scTotal
+    : `<tr><td colspan="8" class="empty">No data</td></tr>`;
 
   // ── Activities Done (one row per activity, from activitiesTable) ──────────
   // Each row: date | working type | activity text | hours (= duration ÷ 60)
