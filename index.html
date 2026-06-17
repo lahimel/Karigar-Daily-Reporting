@@ -322,21 +322,25 @@ const SERVER = 'https://eu.kobotoolbox.org';
 const TOKEN  = 'be8d9189ac085ed0345b12ee0ae622d4e93b3ba0';
 const UID    = 'aJeu3J4hsaeFAETZpKuXzV';
 
-// KRA readable labels (internal API name → Power Query label)
+// KRA readable labels — uses actual internal names from schema (grp_ prefix)
 const KRA_LABELS = {
-  session_program_execution:       'Session & Program Execution',
-  lab_operations_management:       'Lab Operations & Management',
-  resource_inventory_management:   'Resource & Inventory Management',
-  budget_accounts:                 'Budget & Accounts',
-  supervisory_operational_support: 'Supervisory & Operational Support',
-  content_development_learning_design: 'Content Development & Learning Design',
-  stakeholder_engagement:          'Stakeholder Engagement',
-  team_coordination:               'Team Coordination',
-  cross_project_support:           'Cross Project Support',
-  product_sale_in_house_services:  'Product Sale & In-House Services',
-  student_innovation_support:      'Student Innovation Support',
-  proposal_curriculum_nsqf:        'Proposal/Curriculum/NSQF',
-  others:                          'Others'
+  grp_session:                              'Session & Program Execution',
+  grp_lab_operations_management:            'Lab Operations & Management',
+  grp_resource_inventory_management:        'Resource & Inventory Management',
+  grp_budget_accounts:                      'Budget & Accounts',
+  grp_supervisory_operational_support:      'Supervisory & Operational Support',
+  grp_content_development_learning_design:  'Content Development & Learning Design',
+  grp_stakeholder_engagement:               'Stakeholder Engagement',
+  grp_team_coordination:                    'Team Coordination',
+  grp_cross_project_support:                'Cross Project Support',
+  grp_product_sale_inhouse_services:        'Product Sale & In-House Services',
+  grp_student_innovation_support:           'Student Innovation Support',
+  grp_proposal_curriculum_nsqf:             'Proposal/Curriculum/NSQF',
+  grp_others:                               'Others',
+  // fallbacks for old internal names
+  session_program_execution:                'Session & Program Execution',
+  lab_operations_management:                'Lab Operations & Management',
+  others:                                   'Others',
 };
 
 const WT_COLS = {
@@ -450,7 +454,28 @@ const CANDS = {
 
 function detectFields() {
   const fm = {};
+
+  // ── Step 1: use schemaMap (label → exact internal name) — most reliable ──
+  const labelLookup = {
+    name:        'Staff Name',
+    date:        'Date',
+    lab:         'Select Lab',
+    workType:    'Working Type',
+    sessions:    'Number of Sessions',
+    courses:     'Course(s)',
+    otherCourse: 'Other Course Name',
+    kra:         'Select KRA Bucket(s)',
+  };
+  for (const [type, label] of Object.entries(labelLookup)) {
+    const internalName = schemaMap[label];
+    if (internalName && allKeys.includes(internalName)) {
+      fm[type] = internalName;
+    }
+  }
+
+  // ── Step 2: fallback pattern matching for anything not found via schema ──
   for (const [type, cands] of Object.entries(CANDS)) {
+    if (fm[type]) continue;
     for (const c of cands) { if (allKeys.includes(c)) { fm[type] = c; break; } }
     if (fm[type]) continue;
     for (const c of cands) { const m = allKeys.find(k => k.endsWith('/' + c)); if (m) { fm[type] = m; break; } }
@@ -462,22 +487,9 @@ function detectFields() {
       if (fm[type]) break;
     }
   }
+
   if (!fm.name) fm.name = '_submitted_by';
   if (!fm.date) fm.date = '_submission_time';
-
-  // Smart date: prefer a pure YYYY-MM-DD field over a datetime field
-  if (rawData.length) {
-    const sample = rawData.find(r => r[fm.date]) || rawData[0];
-    const cur = String(sample[fm.date] || '');
-    if (cur.includes('T') || cur.includes(' ')) {
-      const pure = allKeys.find(k => {
-        if (k.startsWith('_')) return false;
-        const v = String(sample[k] || '');
-        return /^\d{4}-\d{2}-\d{2}$/.test(v);
-      });
-      if (pure) fm.date = pure;
-    }
-  }
   return fm;
 }
 
@@ -485,41 +497,32 @@ function detectFields() {
 // Called once after fetch. Builds activitiesTable and kraTable.
 function transformData() {
 
-  // ── Discover column groups using schema map + broad fallback ────
-  // schemaMap gives us: "Activity/Task Done" → exact internal name (e.g. "activity_task_done")
-  // We use that as the prefix to find all numbered variants in allKeys
+  // ── Discover columns using schema-derived internal names ────────
+  // From schema: "Activity/Task Done" → "activity_others"
+  //              "Approx. Duration (mins)" → "duration_others"
+  // In the API, each KRA group prefixes these: "grp_lab_operations_management/activity_others"
+  // So we find ALL keys that end with "/" + the base name, OR equal the base name exactly.
 
-  const actBase = schemaMap['Activity/Task Done'] || '';
-  const durBase = schemaMap['Approx. Duration (mins)'] || '';
-  const kraBase = schemaMap['Select KRA Bucket(s)'] || '';
+  const actBase  = schemaMap['Activity/Task Done']       || 'activity_others';
+  const durBase  = schemaMap['Approx. Duration (mins)']  || 'duration_others';
+  const kraQName = schemaMap['Select KRA Bucket(s)']     || 'kra_bucket';
 
-  // Activity columns: exact schema name OR broad fallback
+  // Activity cols: "activity_others" OR "grp_xxx/activity_others"
   actCols = allKeys
-    .filter(k => {
-      if (actBase && (k === actBase || k.startsWith(actBase + '_'))) return true;
-      return k.startsWith('Activity/Task Done') || norm(k).startsWith('activitytaskdone');
-    })
-    .sort(byNum);
+    .filter(k => k === actBase || k.endsWith('/' + actBase))
+    .sort((a, b) => a.localeCompare(b));
 
-  // Duration columns: exact schema name OR broad fallback
+  // Duration cols: "duration_others" OR "grp_xxx/duration_others" — sorted same way as actCols
   durCols = allKeys
-    .filter(k => {
-      if (durBase && (k === durBase || k.startsWith(durBase + '_'))) return true;
-      return k.startsWith('Approx. Duration') || norm(k).startsWith('approxduration');
-    })
-    .sort(byNum);
+    .filter(k => k === durBase || k.endsWith('/' + durBase))
+    .sort((a, b) => a.localeCompare(b));
 
-  // KRA boolean sub-columns
-  kraSubCols = allKeys.filter(k => {
-    if (kraBase && k.startsWith(kraBase + '/')) return true;
-    return k.startsWith('Select KRA Bucket(s)/') ||
-           (k.startsWith('Select_KRA_Bucket') && k.includes('/'));
-  });
+  // KRA boolean sub-cols: "kra_bucket/grp_session", "kra_bucket/grp_lab_operations_management" etc.
+  kraSubCols = allKeys.filter(k => k.startsWith(kraQName + '/'));
 
-  console.log('Schema map (label→name):', JSON.stringify(schemaMap));
-  console.log('actCols:', actCols);
-  console.log('durCols:', durCols);
-  console.log('kraSubCols:', kraSubCols.length, 'found');
+  console.log('actCols found:', actCols);
+  console.log('durCols found:', durCols);
+  console.log('kraSubCols found:', kraSubCols);
 
   activitiesTable = [];
   kraTable        = [];
@@ -817,10 +820,13 @@ function renderTables(records, activities) {
     .sort((a, b) => parseD(String(gv(b, fieldMap.date)||'')).localeCompare(parseD(String(gv(a, fieldMap.date)||''))));
   // Exclude activities from records where Session & Program Execution is a KRA bucket
   // (those days are already captured in the Sessions & Courses table)
+  // Exclude activities from Session & Program Execution records
+  // (those days are captured in Sessions & Courses instead)
   const isSessionKRA = kra => kra.some(k =>
-    k.includes('session') && (k.includes('program') || k.includes('execution'))
-    || k === 'session_program_execution'
-    || k.toLowerCase() === 'session & program execution'
+    k === 'grp_session' ||
+    k === 'session_program_execution' ||
+    k.toLowerCase() === 'session & program execution' ||
+    (k.includes('session') && k.includes('program'))
   );
   const sortedAct = [...activities]
     .filter(a => !isSessionKRA(a.kra || []))
