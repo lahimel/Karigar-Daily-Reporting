@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Daily Report Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#1B3557;--sky:#0EA5E9;--teal:#0D9488;--amber:#D97706;
+  --green:#16A34A;--purple:#7C3AED;--red:#DC2626;--rose:#E11D48;
+  --bg:#F1F5F9;--card:#fff;--text:#0F172A;--muted:#64748B;
+  --border:#E2E8F0;--hover:#F8FAFC;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+/* ── LOADING ──────────────────────────────────── */
+#loadingOverlay{
+  position:fixed;inset:0;background:var(--navy);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  z-index:9999;color:#fff;gap:18px
+}
+.spin{width:52px;height:52px;border:4px solid rgba(255,255,255,.2);
+  border-top-color:#fff;border-radius:50%;animation:spin .75s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#loadingOverlay p{font-size:15px;opacity:.75}
+#loadingOverlay .sub{font-size:12px;opacity:.5}
+
+/* ── LOGIN ───────────────────────────────────── */
+#loginScreen{
+  min-height:100vh;display:none;align-items:center;justify-content:center;
+  background:linear-gradient(145deg,var(--navy) 0%,#1e5799 60%,#2980b9 100%)
+}
+.lcard{
+  background:#fff;border-radius:22px;padding:52px 44px 44px;
+  width:420px;max-width:calc(100vw - 32px);
+  box-shadow:0 32px 72px rgba(0,0,0,.28);text-align:center
+}
+.licon{
+  width:76px;height:76px;background:var(--navy);border-radius:20px;
+  display:flex;align-items:center;justify-content:center;margin:0 auto 22px;
+  box-shadow:0 8px 24px rgba(27,53,87,.4)
+}
+.lcard h1{font-size:26px;font-weight:800;color:var(--text);margin-bottom:4px}
+.lcard .sub{color:var(--muted);font-size:14px;margin-bottom:34px;line-height:1.5}
+.fg{text-align:left;margin-bottom:18px}
+.fg label{display:block;font-size:11px;font-weight:700;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.7px;margin-bottom:7px}
+.fg select,.fg input{
+  width:100%;padding:13px 15px;border:2px solid var(--border);
+  border-radius:11px;font-size:15px;color:var(--text);
+  background:#fff;outline:none;transition:border-color .2s;cursor:pointer
+}
+.fg select:focus,.fg input:focus{border-color:var(--sky)}
+.btn-main{
+  width:100%;padding:15px;background:var(--navy);color:#fff;border:none;
+  border-radius:11px;font-size:16px;font-weight:700;cursor:pointer;
+  transition:background .2s,transform .1s;margin-top:6px;letter-spacing:.2px
+}
+.btn-main:hover{background:#162d4e}
+.btn-main:active{transform:scale(.98)}
+.btn-main:disabled{background:#94A3B8;cursor:not-allowed}
+.lerr{
+  margin-top:12px;padding:11px 14px;background:#FEF2F2;
+  border:1px solid #FECACA;border-radius:9px;color:var(--red);
+  font-size:13px;text-align:left;display:none
+}
+.note{font-size:12px;color:var(--muted);margin-top:18px;line-height:1.6}
+
+/* ── DASHBOARD ───────────────────────────────── */
+#dashboardScreen{display:none}
+.dbh{
+  background:var(--navy);padding:13px 22px;display:flex;
+  align-items:center;gap:14px;flex-wrap:wrap;position:sticky;
+  top:0;z-index:100;box-shadow:0 2px 12px rgba(0,0,0,.22)
+}
+.brand{display:flex;align-items:center;gap:9px;color:#fff;
+  font-weight:800;font-size:16px;flex-shrink:0;letter-spacing:-.2px}
+.brand small{opacity:.55;font-weight:400;font-size:12px;font-style:italic}
+.spacer{flex:1}
+.ubadge{
+  background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.2);
+  color:#fff;padding:6px 14px;border-radius:20px;font-size:13px;font-weight:700
+}
+.flt{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.flt label{color:rgba(255,255,255,.6);font-size:11px;font-weight:600}
+.flt input[type=date]{
+  padding:6px 10px;border:1px solid rgba(255,255,255,.2);border-radius:8px;
+  background:rgba(255,255,255,.1);color:#fff;font-size:12px;outline:none
+}
+.flt input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.7}
+.flt select{
+  padding:6px 10px;border:1px solid rgba(255,255,255,.2);border-radius:8px;
+  background:rgba(255,255,255,.1);color:#fff;font-size:12px;outline:none;cursor:pointer
+}
+.flt select option{background:var(--navy)}
+.bsm{
+  padding:8px 15px;border-radius:9px;font-size:13px;font-weight:700;
+  cursor:pointer;border:none;transition:opacity .2s,transform .1s;white-space:nowrap
+}
+.bsm:active{transform:scale(.97)}
+.bsm:hover{opacity:.85}
+.bdl{background:var(--teal);color:#fff}
+.blo{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.2)!important}
+.blo:hover{background:rgba(255,255,255,.2)!important}
+
+/* ── MAIN ──────────────────────────────────── */
+.dbm{padding:22px;max-width:1440px;margin:0 auto}
+.section-title{
+  font-size:11px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.8px;color:var(--muted);margin-bottom:12px;margin-top:4px
+}
+
+/* KPI Grid */
+.kpig{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin-bottom:22px}
+.kpic{
+  background:var(--card);border-radius:14px;padding:20px 18px;
+  border-top:3px solid var(--border);
+  box-shadow:0 1px 4px rgba(0,0,0,.07);transition:transform .2s,box-shadow .2s
+}
+.kpic:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(0,0,0,.1)}
+.klab{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;
+  color:var(--muted);margin-bottom:11px}
+.kval{font-size:34px;font-weight:900;color:var(--text);line-height:1;letter-spacing:-1px}
+.ksub{font-size:11px;color:var(--muted);margin-top:6px}
+
+/* Charts */
+.cr{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:22px}
+.cc{
+  background:var(--card);border-radius:14px;padding:24px;
+  box-shadow:0 1px 4px rgba(0,0,0,.07)
+}
+.cc h3{font-size:13px;font-weight:700;color:var(--text);margin-bottom:18px}
+.cw{position:relative;height:230px}
+
+/* Tables */
+.tr2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:22px}
+.tc{
+  background:var(--card);border-radius:14px;padding:24px;
+  box-shadow:0 1px 4px rgba(0,0,0,.07);overflow:hidden
+}
+.tc h3{font-size:13px;font-weight:700;color:var(--text);margin-bottom:15px}
+.tw{overflow-x:auto;max-height:320px;overflow-y:auto}
+.dt{width:100%;border-collapse:collapse;font-size:12.5px}
+.dt th{
+  text-align:left;padding:8px 12px;background:#F8FAFC;
+  color:var(--muted);font-size:10px;font-weight:700;
+  text-transform:uppercase;letter-spacing:.5px;
+  position:sticky;top:0;z-index:1;border-bottom:1px solid var(--border)
+}
+.dt td{padding:9px 12px;border-bottom:1px solid var(--border);color:var(--text)}
+.dt tr:last-child td{border-bottom:none}
+.dt tr:hover td{background:var(--hover)}
+.empty{text-align:center;color:var(--muted);padding:32px;font-size:13px}
+
+/* Config */
+.cfgp{
+  background:var(--card);border-radius:14px;padding:22px 24px;
+  box-shadow:0 1px 4px rgba(0,0,0,.07);margin-bottom:22px
+}
+.cfgtop{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.cfgtog{
+  background:none;border:1px solid var(--border);border-radius:8px;
+  padding:7px 14px;font-size:12px;color:var(--muted);cursor:pointer;white-space:nowrap
+}
+.cfgtog:hover{background:var(--bg)}
+.cfgb{display:none;margin-top:18px}
+.cfgb.open{display:block}
+.cfgb p{font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.6}
+.cfgb code{
+  display:block;background:#F8FAFC;border:1px solid var(--border);
+  border-radius:8px;padding:10px 14px;font-size:11px;
+  font-family:monospace;word-break:break-all;max-height:80px;overflow-y:auto;margin-top:6px
+}
+.cfgg{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;margin-top:14px}
+.cfgf label{font-size:11px;font-weight:700;color:var(--muted);display:block;margin-bottom:5px}
+.cfgf select{
+  width:100%;padding:7px 10px;border:1px solid var(--border);
+  border-radius:7px;font-size:12px;background:#fff;outline:none
+}
+.badge{
+  display:inline-block;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:700
+}
+.footer{
+  text-align:center;font-size:12px;color:var(--muted);padding:16px;
+  border-top:1px solid var(--border);margin-top:8px
+}
+
+/* Responsive */
+@media(max-width:1100px){.kpig{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:768px){
+  .cr,.tr2{grid-template-columns:1fr}
+  .kpig{grid-template-columns:repeat(2,1fr)}
+  .dbh{padding:11px 14px}
+  .dbm{padding:14px}
+  .brand small{display:none}
+}
+@media(max-width:480px){
+  .kpig{grid-template-columns:repeat(2,1fr)}
+  .flt{display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- Loading -->
+<div id="loadingOverlay">
+  <div class="spin"></div>
+  <p id="loadMsg">Connecting to KoboToolbox...</p>
+  <p class="sub" id="loadSub">Please wait</p>
+</div>
+
+<!-- Login -->
+<div id="loginScreen">
+  <div class="lcard">
+    <div class="licon">
+      <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round">
+        <rect x="3" y="3" width="7" height="7" rx="1.5"/>
+        <rect x="14" y="3" width="7" height="7" rx="1.5"/>
+        <rect x="3" y="14" width="7" height="7" rx="1.5"/>
+        <rect x="14" y="14" width="7" height="7" rx="1.5"/>
+      </svg>
+    </div>
+    <h1>Daily Report</h1>
+    <p class="sub">Select your name to view<br>your personal dashboard</p>
+
+    <div class="fg">
+      <label>Your Name</label>
+      <select id="nameSelect">
+        <option value="">Loading staff…</option>
+      </select>
+    </div>
+
+    <button class="btn-main" id="loginBtn" onclick="doLogin()">View My Dashboard →</button>
+    <div class="lerr" id="loginErr"></div>
+    <p class="note">Each person sees only their own submissions.<br>Data is loaded securely from KoboToolbox.</p>
+  </div>
+</div>
+
+<!-- Dashboard -->
+<div id="dashboardScreen">
+
+  <!-- Header -->
+  <div class="dbh">
+    <div class="brand">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round">
+        <path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z"/>
+      </svg>
+      Daily Report <small>Dashboard</small>
+    </div>
+    <div class="flt">
+      <label>From</label>
+      <input type="date" id="dateFrom" onchange="applyFilters()">
+      <label>To</label>
+      <input type="date" id="dateTo" onchange="applyFilters()">
+      <select id="wtFilter" onchange="applyFilters()">
+        <option value="">All Work Types</option>
+      </select>
+    </div>
+    <div class="spacer"></div>
+    <span class="ubadge" id="uBadge">👤</span>
+    <button class="bsm bdl" onclick="doDownload()">⬇ Download Excel</button>
+    <button class="bsm blo" onclick="doLogout()">← Logout</button>
+  </div>
+
+  <!-- Content -->
+  <div class="dbm">
+
+    <!-- KPIs -->
+    <div class="section-title">Key Metrics</div>
+    <div class="kpig">
+      <div class="kpic" style="border-top-color:#3B82F6">
+        <div class="klab">Total Submissions</div>
+        <div class="kval" id="kTotal">—</div>
+        <div class="ksub" id="kTotalS">records</div>
+      </div>
+      <div class="kpic" style="border-top-color:#0EA5E9">
+        <div class="klab">Lab / Field Days</div>
+        <div class="kval" id="kLF">—</div>
+        <div class="ksub">active work days</div>
+      </div>
+      <div class="kpic" style="border-top-color:#0D9488">
+        <div class="klab">Sessions</div>
+        <div class="kval" id="kSes">—</div>
+        <div class="ksub">training sessions</div>
+      </div>
+      <div class="kpic" style="border-top-color:#16A34A">
+        <div class="klab">Courses</div>
+        <div class="kval" id="kCrs">—</div>
+        <div class="ksub">courses covered</div>
+      </div>
+      <div class="kpic" style="border-top-color:#D97706">
+        <div class="klab">KRA Activities</div>
+        <div class="kval" id="kKRA">—</div>
+        <div class="ksub">days with KRA</div>
+      </div>
+      <div class="kpic" style="border-top-color:#7C3AED">
+        <div class="klab">Total Hours</div>
+        <div class="kval" id="kHrs">—</div>
+        <div class="ksub">hours worked</div>
+      </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="section-title">Breakdown</div>
+    <div class="cr">
+      <div class="cc">
+        <h3>📊 Submissions by Work Type</h3>
+        <div class="cw"><canvas id="pieC"></canvas></div>
+      </div>
+      <div class="cc">
+        <h3>🎯 KRA Distribution</h3>
+        <div class="cw"><canvas id="barC"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Tables -->
+    <div class="section-title">Submission Detail</div>
+    <div class="tr2">
+      <div class="tc">
+        <h3>📚 Sessions &amp; Courses</h3>
+        <div class="tw">
+          <table class="dt">
+            <thead><tr><th>Date</th><th>Type</th><th>Sessions</th><th>Courses</th></tr></thead>
+            <tbody id="tSes"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="tc">
+        <h3>✅ Activities Done</h3>
+        <div class="tw">
+          <table class="dt">
+            <thead><tr><th>Date</th><th>KRA</th><th>Hours</th><th>Activity</th></tr></thead>
+            <tbody id="tAct"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Field Config -->
+    <div class="cfgp">
+      <div class="cfgtop">
+        <span style="font-size:13px;color:var(--muted)">Charts or numbers look wrong? Configure field mapping below.</span>
+        <button class="cfgtog" onclick="toggleCfg()">⚙️ Field Configuration</button>
+      </div>
+      <div class="cfgb" id="cfgB">
+        <p>Map your KoboToolbox field names to dashboard metrics. Available fields:<br>
+        <code id="allFieldsCode">—</code></p>
+        <div class="cfgg" id="cfgGrid"></div>
+        <button class="bsm bdl" style="margin-top:16px" onclick="saveCfg()">✓ Apply Configuration</button>
+      </div>
+    </div>
+
+    <div class="footer">Daily Report Dashboard · Data from KoboToolbox EU · Each person sees only their own submissions</div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+//  CONFIG
+// ═══════════════════════════════════════════════════════
+const TOKEN   = 'be8d9189ac085ed0345b12ee0ae622d4e93b3ba0';
+const FORM_ID = 'aJeu3J4hsaeFAETZpKuXzV';
+const API     = 'https://eu.kobotoolbox.org/api/v2';
+const PROXY   = 'https://corsproxy.io/?';
+
+// Field detection: ordered by likelihood
+const CANDIDATES = {
+  name:     ['your_name','staff_name','name','officer_name','full_name','officer','respondent','_submitted_by'],
+  date:     ['date','today','report_date','start_date','_submission_time'],
+  workType: ['working_type','work_type','type_of_work','day_type','activity_type','type','work_category','day_category'],
+  hours:    ['hours','total_hours','working_hours','hours_worked','no_hours','num_hours','hrs'],
+  sessions: ['sessions','no_sessions','no_of_sessions','training_sessions','session_count','num_sessions','total_sessions'],
+  courses:  ['courses','no_courses','no_of_courses','course_count','num_courses','total_courses'],
+  kra:      ['kra','kra_activity','kra_type','key_result_area','kra_category','kra_name','activity_category','result_area'],
+  location: ['location','place','district','block','lab_name','site','centre','area'],
+  activity: ['activities','activities_done','activity_description','work_done','activity_detail','remarks','description','tasks']
+};
+
+const FLABELS = {
+  name:'Staff Name',date:'Date',workType:'Working Type',hours:'Hours',
+  sessions:'Sessions',courses:'Courses',kra:'KRA Activity',location:'Location',activity:'Activity'
+};
+
+const WT_COLORS = {
+  lab:'#3B82F6',field:'#16A34A',travel:'#D97706',
+  compoff:'#7C3AED','comp off':'#7C3AED',leave:'#DC2626',other:'#94A3B8'
+};
+const CHART_PALETTE = ['#3B82F6','#0D9488','#16A34A','#D97706','#E11D48','#7C3AED','#0EA5E9','#F97316','#84CC16','#EC4899'];
+
+// ═══════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════
+const S = {
+  all:[],keys:[],fm:{},userMap:{},
+  user:null,userData:[],filtered:[]
+};
+let CHS = {};
+
+// ═══════════════════════════════════════════════════════
+//  BOOT
+// ═══════════════════════════════════════════════════════
+async function boot() {
+  setLoad(true,'Connecting to KoboToolbox…','EU server');
+  try {
+    S.all = await fetchAll();
+    setLoad(true,`Processing ${S.all.length} records…`,'Auto-detecting fields');
+    S.keys   = getKeys(S.all);
+    S.fm     = detectFields(S.all);
+    S.userMap= buildMap(S.all);
+    fillLogin();
+    setLoad(false);
+    showEl('loginScreen','flex');
+  } catch(e) {
+    setLoad(false);
+    showEl('loginScreen','flex');
+    showErr(e.message || 'Connection failed. Check your network.');
+    console.error(e);
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  API FETCH
+// ═══════════════════════════════════════════════════════
+async function fetchAll() {
+  const rows = [];
+  let url = `${API}/assets/${FORM_ID}/data/?format=json&limit=500`;
+  while (url) {
+    const r = await fetch(PROXY + encodeURIComponent(url), { headers:{'Authorization':`Token ${TOKEN}`,'x-requested-with':'XMLHttpRequest'} });
+    if (!r.ok) {
+      const t = await r.text().catch(()=>'');
+      throw new Error(`KoboToolbox API returned ${r.status}. ${t.slice(0,150)}`);
+    }
+    const d = await r.json();
+    rows.push(...(d.results || []));
+    url = d.next || null;
+    if (rows.length >= 10000) break;
+  }
+  if (!rows.length) throw new Error('No submissions found in this form.');
+  return rows;
+}
+
+// ═══════════════════════════════════════════════════════
+//  FIELD DETECTION
+// ═══════════════════════════════════════════════════════
+function getKeys(data) {
+  const s = new Set();
+  data.slice(0,30).forEach(r => Object.keys(r).forEach(k => s.add(k)));
+  return [...s];
+}
+
+function detectFields(data) {
+  if (!data.length) return {};
+  const keys = getKeys(data);
+  const norm = s => s.toLowerCase().replace(/[^a-z0-9]/g,'');
+  const fm = {};
+
+  for (const [type,cands] of Object.entries(CANDIDATES)) {
+    // 1. Exact match
+    for (const c of cands) {
+      const m = keys.find(k => k === c);
+      if (m) { fm[type]=m; break; }
+    }
+    if (fm[type]) continue;
+    // 2. Ends with /candidate (group prefix)
+    for (const c of cands) {
+      const m = keys.find(k => k.endsWith('/'+c));
+      if (m) { fm[type]=m; break; }
+    }
+    if (fm[type]) continue;
+    // 3. Contains candidate substring
+    for (const key of keys) {
+      const kn = norm(key);
+      for (const c of cands) {
+        const cn = norm(c);
+        if (kn.includes(cn) || cn.includes(kn)) {
+          fm[type]=key; break;
+        }
+      }
+      if (fm[type]) break;
+    }
+  }
+  if (!fm.name) fm.name = '_submitted_by';
+  if (!fm.date) fm.date = '_submission_time';
+  return fm;
+}
+
+function gv(rec, field) {
+  if (!field) return '';
+  return rec[field] ?? '';
+}
+
+// ═══════════════════════════════════════════════════════
+//  USER MAP & LOGIN
+// ═══════════════════════════════════════════════════════
+function buildMap(data) {
+  const m = {};
+  data.forEach(r => {
+    const n = String(gv(r, S.fm.name)||'').trim();
+    if (n) { if (!m[n]) m[n]=[]; m[n].push(r); }
+  });
+  return m;
+}
+
+function fillLogin() {
+  const sel = document.getElementById('nameSelect');
+  const names = Object.keys(S.userMap).sort();
+  if (!names.length) {
+    sel.innerHTML = '<option value="">No staff found — see field config</option>';
+    return;
+  }
+  sel.innerHTML = '<option value="">— Select your name —</option>' +
+    names.map(n => `<option value="${x(n)}">${x(n)} (${S.userMap[n].length})</option>`).join('');
+}
+
+function doLogin() {
+  const name = document.getElementById('nameSelect').value.trim();
+  if (!name) { showErr('Please select your name.'); return; }
+  S.user     = name;
+  S.userData = S.userMap[name] || [];
+  document.getElementById('uBadge').textContent = '👤 ' + name;
+  setDateDefaults();
+  fillWorkTypeFilter();
+  applyFilters();
+  setupCfg();
+  hideEl('loginScreen');
+  showEl('dashboardScreen','block');
+}
+
+function doLogout() {
+  S.user = null;
+  CHS.pie && CHS.pie.destroy();
+  CHS.bar && CHS.bar.destroy();
+  CHS = {};
+  hideEl('dashboardScreen');
+  showEl('loginScreen','flex');
+}
+
+function setDateDefaults() {
+  const dates = S.userData
+    .map(r => parseDate(gv(r, S.fm.date)))
+    .filter(Boolean).sort();
+  if (dates.length) {
+    document.getElementById('dateFrom').value = dates[0];
+    document.getElementById('dateTo').value   = dates[dates.length-1];
+  }
+}
+
+function fillWorkTypeFilter() {
+  const sel = document.getElementById('wtFilter');
+  const types = new Set(S.userData.map(r => String(gv(r,S.fm.workType)||'').trim()).filter(Boolean));
+  sel.innerHTML = '<option value="">All Work Types</option>' +
+    [...types].sort().map(t => `<option value="${x(t)}">${x(t)}</option>`).join('');
+}
+
+// ═══════════════════════════════════════════════════════
+//  FILTERS
+// ═══════════════════════════════════════════════════════
+function applyFilters() {
+  const from = document.getElementById('dateFrom').value;
+  const to   = document.getElementById('dateTo').value;
+  const wt   = document.getElementById('wtFilter').value;
+
+  S.filtered = S.userData.filter(r => {
+    const d = parseDate(gv(r, S.fm.date));
+    if (from && d && d < from) return false;
+    if (to   && d && d > to)   return false;
+    if (wt) {
+      const t = String(gv(r, S.fm.workType)||'');
+      if (t !== wt) return false;
+    }
+    return true;
+  });
+  renderAll();
+}
+
+// ═══════════════════════════════════════════════════════
+//  RENDER
+// ═══════════════════════════════════════════════════════
+function renderAll() {
+  renderKPIs();
+  renderCharts();
+  renderTables();
+}
+
+function renderKPIs() {
+  const d = S.filtered;
+  set('kTotal', d.length);
+  document.getElementById('kTotalS').textContent = `of ${S.userData.length} total`;
+
+  const lf = d.filter(r => {
+    const t = String(gv(r,S.fm.workType)||'').toLowerCase();
+    return t.includes('lab') || t.includes('field');
+  }).length;
+  set('kLF', lf);
+
+  const ses = numSum(d, S.fm.sessions);
+  set('kSes', ses !== null ? ses : d.reduce((acc,r) => acc + (gv(r,S.fm.sessions)?1:0), 0));
+
+  const crs = numSum(d, S.fm.courses);
+  set('kCrs', crs !== null ? crs : '—');
+
+  const kra = d.filter(r => String(gv(r,S.fm.kra)||'').trim()).length;
+  set('kKRA', kra);
+
+  const hrs = numSum(d, S.fm.hours);
+  set('kHrs', hrs !== null ? hrs : '—');
+}
+
+function renderCharts() {
+  const d = S.filtered;
+
+  // ── Pie ──
+  const tMap = {};
+  d.forEach(r => {
+    const t = String(gv(r,S.fm.workType)||'Unknown').trim() || 'Unknown';
+    tMap[t] = (tMap[t]||0)+1;
+  });
+  const pLabels = Object.keys(tMap);
+  const pData   = Object.values(tMap);
+  const pColors = pLabels.map(l => {
+    const n = l.toLowerCase().replace(/\s+/g,'');
+    for (const [k,v] of Object.entries(WT_COLORS)) if (n.includes(k.replace(/\s/g,''))) return v;
+    return '#94A3B8';
+  });
+
+  if (CHS.pie) CHS.pie.destroy();
+  if (pData.length) {
+    CHS.pie = new Chart(document.getElementById('pieC').getContext('2d'), {
+      type:'doughnut',
+      data:{labels:pLabels,datasets:[{data:pData,backgroundColor:pColors,borderWidth:2,borderColor:'#fff',hoverOffset:4}]},
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{position:'right',labels:{boxWidth:12,font:{size:11},padding:10}}}}
+    });
+  }
+
+  // ── Bar ──
+  const kMap = {};
+  d.forEach(r => {
+    const k = String(gv(r,S.fm.kra)||'').trim() || 'Not Set';
+    kMap[k] = (kMap[k]||0)+1;
+  });
+  const bLabels = Object.keys(kMap).sort((a,b)=>kMap[b]-kMap[a]).slice(0,10);
+  const bData   = bLabels.map(l=>kMap[l]);
+
+  if (CHS.bar) CHS.bar.destroy();
+  if (bData.length) {
+    CHS.bar = new Chart(document.getElementById('barC').getContext('2d'), {
+      type:'bar',
+      data:{labels:bLabels,datasets:[{data:bData,backgroundColor:CHART_PALETTE.slice(0,bLabels.length),borderRadius:6,borderSkipped:false}]},
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false}},
+        scales:{
+          y:{beginAtZero:true,ticks:{stepSize:1,font:{size:11}}},
+          x:{ticks:{maxRotation:40,font:{size:10}}}
+        }}
+    });
+  }
+}
+
+function renderTables() {
+  const d = [...S.filtered].sort((a,b) => {
+    const da = parseDate(gv(a,S.fm.date))||'';
+    const db = parseDate(gv(b,S.fm.date))||'';
+    return db.localeCompare(da);
+  });
+
+  // Sessions & Courses
+  const sb = document.getElementById('tSes');
+  if (!d.length) {
+    sb.innerHTML = `<tr><td colspan="4" class="empty">No data for selected filters</td></tr>`;
+  } else {
+    sb.innerHTML = d.map(r => {
+      const dt  = fmtDate(gv(r,S.fm.date));
+      const wt  = gv(r,S.fm.workType)||'—';
+      const ses = gv(r,S.fm.sessions);
+      const crs = gv(r,S.fm.courses);
+      return `<tr><td>${x(dt)}</td><td>${wtBadge(wt)}</td><td>${x(String(ses||'—'))}</td><td>${x(String(crs||'—'))}</td></tr>`;
+    }).join('');
+  }
+
+  // Activities
+  const ab = document.getElementById('tAct');
+  if (!d.length) {
+    ab.innerHTML = `<tr><td colspan="4" class="empty">No data for selected filters</td></tr>`;
+  } else {
+    ab.innerHTML = d.map(r => {
+      const dt  = fmtDate(gv(r,S.fm.date));
+      const kra = gv(r,S.fm.kra)||'—';
+      const hrs = gv(r,S.fm.hours)||'—';
+      const act = String(gv(r,S.fm.activity)||'—');
+      const short = act.length > 55 ? act.slice(0,55)+'…' : act;
+      return `<tr><td>${x(dt)}</td><td>${x(String(kra))}</td><td>${x(String(hrs))}</td><td title="${x(act)}">${x(short)}</td></tr>`;
+    }).join('');
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  EXCEL DOWNLOAD
+// ═══════════════════════════════════════════════════════
+function doDownload() {
+  if (!S.filtered.length) { alert('No data to download for the selected filters.'); return; }
+  try {
+    const wb = XLSX.utils.book_new();
+
+    // ── Summary sheet ──
+    const ses = numSum(S.filtered, S.fm.sessions);
+    const crs = numSum(S.filtered, S.fm.courses);
+    const hrs = numSum(S.filtered, S.fm.hours);
+    const lf  = S.filtered.filter(r=>{const t=String(gv(r,S.fm.workType)||'').toLowerCase();return t.includes('lab')||t.includes('field');}).length;
+    const sumData = [
+      ['Daily Report Summary'],[''],
+      ['Staff Name', S.user],
+      ['From', document.getElementById('dateFrom').value],
+      ['To',   document.getElementById('dateTo').value],
+      ['Generated', new Date().toLocaleString()],
+      [''],
+      ['Metric','Value'],
+      ['Total Submissions', S.filtered.length],
+      ['Lab / Field Days', lf],
+      ['Total Sessions', ses ?? 'N/A'],
+      ['Total Courses', crs ?? 'N/A'],
+      ['Total Hours', hrs ?? 'N/A'],
+    ];
+    // Work type breakdown
+    const tMap = {};
+    S.filtered.forEach(r => { const t=String(gv(r,S.fm.workType)||'Other');tMap[t]=(tMap[t]||0)+1; });
+    sumData.push([''],['Work Type Breakdown','']);
+    Object.entries(tMap).forEach(([k,v]) => sumData.push([k,v]));
+
+    const wsSumm = XLSX.utils.aoa_to_sheet(sumData);
+    wsSumm['!cols'] = [{wch:26},{wch:30}];
+    XLSX.utils.book_append_sheet(wb, wsSumm, 'Summary');
+
+    // ── All data sheet ──
+    const rows = S.filtered.map(r => {
+      const obj = {};
+      // Include all visible (non-system) keys plus submission time
+      S.keys.filter(k => !k.startsWith('_') || k === '_submission_time').forEach(k => {
+        obj[k] = r[k] ?? '';
+      });
+      return obj;
+    });
+    const wsAll = XLSX.utils.json_to_sheet(rows);
+    XLSX.utils.book_append_sheet(wb, wsAll, 'All Submissions');
+
+    const fname = `${S.user.replace(/\s+/g,'_')}_DailyReport_${new Date().toISOString().slice(0,10)}.xlsx`;
+    XLSX.writeFile(wb, fname);
+  } catch(e) {
+    alert('Excel download failed: ' + e.message);
+    console.error(e);
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  FIELD CONFIG PANEL
+// ═══════════════════════════════════════════════════════
+function setupCfg() {
+  const all = S.keys;
+  document.getElementById('allFieldsCode').textContent = all.join(', ');
+  const grid = document.getElementById('cfgGrid');
+  grid.innerHTML = Object.entries(FLABELS).map(([type,label]) => `
+    <div class="cfgf">
+      <label>${label}</label>
+      <select id="cfg_${type}">
+        <option value="">— not mapped —</option>
+        ${all.map(k=>`<option value="${x(k)}" ${S.fm[type]===k?'selected':''}>${x(k)}</option>`).join('')}
+      </select>
+    </div>`).join('');
+}
+
+function toggleCfg() {
+  document.getElementById('cfgB').classList.toggle('open');
+}
+
+function saveCfg() {
+  Object.keys(FLABELS).forEach(type => {
+    const el = document.getElementById('cfg_'+type);
+    if (el) S.fm[type] = el.value || undefined;
+  });
+  S.userMap = buildMap(S.all);
+  applyFilters();
+  alert('Configuration saved — dashboard updated!');
+}
+
+// ═══════════════════════════════════════════════════════
+//  HELPERS
+// ═══════════════════════════════════════════════════════
+function numSum(data, field) {
+  if (!field) return null;
+  let t=0, f=false;
+  data.forEach(r => { const v=parseFloat(gv(r,field)); if(!isNaN(v)){t+=v;f=true;} });
+  return f ? Math.round(t*100)/100 : null;
+}
+
+function parseDate(v) {
+  if (!v) return null;
+  const m = String(v).match(/^(\d{4}-\d{2}-\d{2})/);
+  return m ? m[1] : null;
+}
+
+function fmtDate(v) {
+  const d = parseDate(v);
+  if (!d) return String(v||'—');
+  const [yr,mo,dy] = d.split('-');
+  const M=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${parseInt(dy)} ${M[parseInt(mo)-1]} ${yr}`;
+}
+
+function wtBadge(t) {
+  const n = t.toLowerCase().replace(/\s+/g,'');
+  const col = Object.entries(WT_COLORS).find(([k])=>n.includes(k.replace(/\s/g,'')))?.[1]||'#94A3B8';
+  return `<span class="badge" style="background:${col}20;color:${col};border:1px solid ${col}40">${x(t)}</span>`;
+}
+
+function x(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function set(id,v) { const e=document.getElementById(id); if(e) e.textContent=v; }
+function showEl(id,d){document.getElementById(id).style.display=d||'block'}
+function hideEl(id){document.getElementById(id).style.display='none'}
+function setLoad(on,msg,sub){
+  document.getElementById('loadingOverlay').style.display=on?'flex':'none';
+  if(msg)document.getElementById('loadMsg').textContent=msg;
+  if(sub)document.getElementById('loadSub').textContent=sub;
+}
+function showErr(msg){
+  const e=document.getElementById('loginErr');
+  e.textContent=msg;e.style.display='block';
+}
+
+// ═══════════════════════════════════════════════════════
+//  START
+// ═══════════════════════════════════════════════════════
+boot();
+</script>
+</body>
+</html>
