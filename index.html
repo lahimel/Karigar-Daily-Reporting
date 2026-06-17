@@ -314,353 +314,412 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 </div>
 
 <script>
-// ── identical fetch pattern to Karigar Batch Tracker ──────
 Chart.register(ChartDataLabels);
+
+// ── Config ────────────────────────────────────────────────
 const PROXY  = 'https://corsproxy.io/?';
 const SERVER = 'https://eu.kobotoolbox.org';
 const TOKEN  = 'be8d9189ac085ed0345b12ee0ae622d4e93b3ba0';
 const UID    = 'aJeu3J4hsaeFAETZpKuXzV';
 
-// ── KRA label map — from Power Query column names ─────────
-// key = internal KoboToolbox choice name, value = label
+// KRA readable labels (internal API name → Power Query label)
 const KRA_LABELS = {
-  session_program_execution:      'Session & Program Execution',
-  lab_operations_management:      'Lab Operations & Management',
-  resource_inventory_management:  'Resource & Inventory Management',
-  budget_accounts:                'Budget & Accounts',
-  supervisory_operational_support:'Supervisory & Operational Support',
-  content_development_learning_design:'Content Development & Learning Design',
-  stakeholder_engagement:         'Stakeholder Engagement',
-  team_coordination:              'Team Coordination',
-  cross_project_support:          'Cross Project Support',
-  product_sale_in_house_services: 'Product Sale & In-House Services',
-  student_innovation_support:     'Student Innovation Support',
-  proposal_curriculum_nsqf:       'Proposal/Curriculum/NSQF',
-  others:                         'Others'
+  session_program_execution:       'Session & Program Execution',
+  lab_operations_management:       'Lab Operations & Management',
+  resource_inventory_management:   'Resource & Inventory Management',
+  budget_accounts:                 'Budget & Accounts',
+  supervisory_operational_support: 'Supervisory & Operational Support',
+  content_development_learning_design: 'Content Development & Learning Design',
+  stakeholder_engagement:          'Stakeholder Engagement',
+  team_coordination:               'Team Coordination',
+  cross_project_support:           'Cross Project Support',
+  product_sale_in_house_services:  'Product Sale & In-House Services',
+  student_innovation_support:      'Student Innovation Support',
+  proposal_curriculum_nsqf:        'Proposal/Curriculum/NSQF',
+  others:                          'Others'
 };
 
-// Work type colours (matching Power BI pie)
 const WT_COLS = {
-  lab:'#4F46E5',field:'#16A34A',travel:'#D97706',
-  compoff:'#7C3AED','comp off':'#7C3AED',leave:'#EF4444',other:'#94A3B8'
+  lab:'#4F46E5', field:'#16A34A', travel:'#D97706',
+  compoff:'#7C3AED', 'comp off':'#7C3AED', leave:'#EF4444', other:'#94A3B8'
 };
-
-// ── Field detection candidates (exact Power Query labels first) ─
-const CANDS = {
-  name:     ['Staff Name','staff_name','your_name','name','_submitted_by'],
-  date:     ['Date','date','report_date','today'],   // NOT _submission_time — use report date only
-  lab:      ['Select Lab','Select_Lab','select_lab'],
-  workType: ['Working Type','working_type','work_type','type_of_work'],
-  sessions: ['Number of Sessions','number_of_sessions','sessions','no_sessions'],
-  courses:  ['Course(s)','courses','course'],
-  kra:      ['Select KRA Bucket(s)','select_kra_bucket_s_','kra','kra_buckets'],
-  otherCourse: ['Other Course Name','other_course_name','other_course','course_other'],
-};
+const BAR_PAL = ['#4F46E5','#0D9488','#16A34A','#D97706','#E11D48','#7C3AED',
+                 '#0EA5E9','#F97316','#84CC16','#EC4899','#3B82F6','#F59E0B'];
 
 // ── State ─────────────────────────────────────────────────
-let allData=[],allKeys=[],fieldMap={},userMap={},actCols=[],durCols=[];
-let currentUser=null,userData=[],CHS={};
+let rawData         = [];   // raw API records
+let activitiesTable = [];   // transformed: one row per activity  (mirrors Activities PQ table)
+let kraTable        = [];   // transformed: one row per KRA bucket (mirrors KRA PQ table)
+let allKeys         = [];
+let actCols         = [];   // detected Activity/Task Done columns
+let durCols         = [];   // detected Approx. Duration columns
+let kraSubCols      = [];   // detected KRA boolean sub-columns
+let fieldMap        = {};
+let userMap         = {};
+let currentUser     = null;
+let userData        = [];   // rawData filtered to current user
+let CHS             = {};
 
 // ── Helpers ───────────────────────────────────────────────
-function gv(r,f){return(f&&r)?((r[f]!==undefined&&r[f]!==null)?r[f]:''):''}
-function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
-function set(id,v){const e=document.getElementById(id);if(e)e.textContent=v}
-function parseD(v){if(!v)return'';const m=String(v).match(/^(\d{4}-\d{2}-\d{2})/);return m?m[1]:'';}
-function fmtDate(v){
-  const d=parseD(v);if(!d)return String(v||'—').slice(0,10);
-  const[yr,mo,dy]=d.split('-');
-  const M=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  return`${parseInt(dy)} ${M[parseInt(mo)-1]} ${yr}`;
+const norm  = k => k.toLowerCase().replace(/[^a-z0-9]/g, '');
+const byNum = (a, b) => (parseInt(a.match(/(\d+)$/)?.[1] ?? 0)) - (parseInt(b.match(/(\d+)$/)?.[1] ?? 0));
+const gv    = (r, f) => (f && r && r[f] !== undefined && r[f] !== null) ? r[f] : '';
+const esc   = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const set   = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+
+function parseD(v) {
+  if (!v) return '';
+  const m = String(v).match(/^(\d{4}-\d{2}-\d{2})/);
+  return m ? m[1] : '';
 }
-// fmtHrs: convert minutes → hours, always 2 decimal places, no suffix (matches Power BI "3.00")
-function fmtHrs(mins){
-  if(mins==null||isNaN(mins))return'—';
-  return(mins/60).toFixed(2);
+function fmtDate(v) {
+  const d = parseD(v);
+  if (!d) return String(v || '—').slice(0, 10);
+  const [yr, mo, dy] = d.split('-');
+  const M = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${parseInt(dy)} ${M[parseInt(mo)-1]} ${yr}`;
 }
-function wtColor(wt){
-  const n=(wt||'').toLowerCase().replace(/\s+/g,'');
-  for(const[k,v]of Object.entries(WT_COLS))if(n.includes(k.replace(/\s/g,'')))return v;
+function fmtHrs(mins) {
+  if (mins == null || isNaN(mins)) return '—';
+  return (mins / 60).toFixed(2);
+}
+function wtColor(wt) {
+  const n = (wt || '').toLowerCase().replace(/\s+/g, '');
+  for (const [k, v] of Object.entries(WT_COLS)) if (n.includes(k.replace(/\s/g,''))) return v;
   return WT_COLS.other;
 }
-function wtBadge(wt){
-  const c=wtColor(wt);
-  return`<span class="badge" style="background:${c}18;color:${c};border:1px solid ${c}30">${esc(wt||'—')}</span>`;
+function wtBadge(wt) {
+  const c = wtColor(wt);
+  return `<span class="badge" style="background:${c}18;color:${c};border:1px solid ${c}30">${esc(wt||'—')}</span>`;
 }
 
-// ── Fetch — exact Karigar Batch Tracker pattern ───────────
-async function fetchAllPages(){
-  let results=[],url=`${SERVER}/api/v2/assets/${UID}/data/?format=json&limit=100`;
-  while(url){
-    const res=await fetch(PROXY+encodeURIComponent(url),{headers:{'Authorization':`Token ${TOKEN}`,'x-requested-with':'XMLHttpRequest'}});
-    if(!res.ok)throw new Error(`API error ${res.status} — check token / asset UID`);
-    const data=await res.json();
-    results=results.concat(data.results||[]);
-    url=data.next||null;
+// ── Fetch — same proven pattern as Karigar Batch Tracker ─────
+async function fetchAllPages() {
+  let results = [], url = `${SERVER}/api/v2/assets/${UID}/data/?format=json&lang=%3Aen-label&limit=100`;
+  while (url) {
+    const res = await fetch(PROXY + encodeURIComponent(url), {
+      headers: { 'Authorization': `Token ${TOKEN}`, 'x-requested-with': 'XMLHttpRequest' }
+    });
+    if (!res.ok) throw new Error(`API error ${res.status} — check token / asset UID`);
+    const data = await res.json();
+    results = results.concat(data.results || []);
+    url = data.next || null;
   }
   return results;
 }
 
 // ── Field detection ───────────────────────────────────────
-function detectFields(){
-  const norm=s=>s.toLowerCase().replace(/[^a-z0-9]/g,'');
-  const fm={};
-  for(const[type,cands]of Object.entries(CANDS)){
-    for(const c of cands){if(allKeys.find(k=>k===c)){fm[type]=allKeys.find(k=>k===c);break;}}
-    if(fm[type])continue;
-    for(const c of cands){const m=allKeys.find(k=>k.endsWith('/'+c));if(m){fm[type]=m;break;}}
-    if(fm[type])continue;
-    for(const key of allKeys){
-      for(const c of cands){if(norm(key).includes(norm(c))||norm(c).includes(norm(key))){fm[type]=key;break;}}
-      if(fm[type])break;
+const CANDS = {
+  name:        ['Staff Name','staff_name','your_name','name','_submitted_by'],
+  date:        ['Date','date','report_date','today'],
+  lab:         ['Select Lab','Select_Lab','select_lab'],
+  workType:    ['Working Type','Working_Type','working_type','work_type'],
+  sessions:    ['Number of Sessions','Number_of_Sessions','number_of_sessions','sessions'],
+  courses:     ['Course(s)','courses','course'],
+  otherCourse: ['Other Course Name','Other_Course_Name','other_course_name','other_course'],
+  kra:         ['Select KRA Bucket(s)','select_kra_bucket_s_','kra'],
+};
+
+function detectFields() {
+  const fm = {};
+  for (const [type, cands] of Object.entries(CANDS)) {
+    for (const c of cands) { if (allKeys.includes(c)) { fm[type] = c; break; } }
+    if (fm[type]) continue;
+    for (const c of cands) { const m = allKeys.find(k => k.endsWith('/' + c)); if (m) { fm[type] = m; break; } }
+    if (fm[type]) continue;
+    for (const key of allKeys) {
+      for (const c of cands) {
+        if (norm(key).includes(norm(c)) || norm(c).includes(norm(key))) { fm[type] = key; break; }
+      }
+      if (fm[type]) break;
     }
   }
-  if(!fm.name)fm.name='_submitted_by';
-  if(!fm.date)fm.date='_submission_time';
+  if (!fm.name) fm.name = '_submitted_by';
+  if (!fm.date) fm.date = '_submission_time';
+
+  // Smart date: prefer a pure YYYY-MM-DD field over a datetime field
+  if (rawData.length) {
+    const sample = rawData.find(r => r[fm.date]) || rawData[0];
+    const cur = String(sample[fm.date] || '');
+    if (cur.includes('T') || cur.includes(' ')) {
+      const pure = allKeys.find(k => {
+        if (k.startsWith('_')) return false;
+        const v = String(sample[k] || '');
+        return /^\d{4}-\d{2}-\d{2}$/.test(v);
+      });
+      if (pure) fm.date = pure;
+    }
+  }
   return fm;
 }
 
-// ── Discover activity & duration columns ──────────────────
-// Mirrors Power Query: ActivityColumns = List.Select(..., Text.StartsWith(_, "Activity/Task Done"))
-//                      DurationColumns = List.Select(..., Text.StartsWith(_, "Approx. Duration"))
-function discoverActivityCols(){
-  const norm=k=>k.toLowerCase().replace(/[^a-z0-9]/g,'');
-  const numSuffix=k=>{const m=k.match(/(\d+)$/);return m?parseInt(m[1]):0;};
+// ── Transform data (mirrors Power Query) ──────────────────
+// Called once after fetch. Builds activitiesTable and kraTable.
+function transformData() {
 
-  // Very broad: catch any field name containing activity+task, or task+done
-  actCols=allKeys
-    .filter(k=>{
-      const n=norm(k);
-      return n.startsWith('activitytaskdone')||n.startsWith('activitytask')||
-             (n.includes('activity')&&n.includes('task'))||
-             (n.includes('task')&&n.includes('done'));
-    })
-    .sort((a,b)=>numSuffix(a)-numSuffix(b));
+  // Discover column groups (with ?lang=:en-label these match PQ label names)
+  actCols = allKeys
+    .filter(k => k.startsWith('Activity/Task Done') || norm(k).startsWith('activitytaskdone'))
+    .sort(byNum);
 
-  // Very broad: catch any field containing "duration" OR approx+min OR ends with mins
-  durCols=allKeys
-    .filter(k=>{
-      const n=norm(k);
-      return n.includes('duration')||
-             (n.includes('approx')&&n.includes('min'))||
-             n.endsWith('mins')||n.endsWith('minutes');
-    })
-    .sort((a,b)=>numSuffix(a)-numSuffix(b));
-}
+  durCols = allKeys
+    .filter(k => k.startsWith('Approx. Duration') || norm(k).startsWith('approxduration'))
+    .sort(byNum);
 
-// ── Activities from one record (mirrors Power Query logic) ─
-// Pairs actCols[i] ↔ durCols[i], skips blank activities
-function getActivities(rec){
-  const out=[];
-  for(let i=0;i<actCols.length;i++){
-    const av=rec[actCols[i]];
-    if(av==null||av===''||av===false||String(av).toLowerCase()==='false'||String(av).trim()==='')continue;
-    const raw=i<durCols.length?rec[durCols[i]]:null;
-    const mins=(raw!==null&&raw!==undefined&&raw!==''&&raw!==false)?parseFloat(raw):null;
-    out.push({task:String(av).trim(),mins:(!isNaN(mins)&&mins>0)?mins:null});
-  }
-  return out;
-}
+  // KRA boolean sub-columns: "Select KRA Bucket(s)/Session & Program Execution" etc.
+  kraSubCols = allKeys.filter(k =>
+    k.startsWith('Select KRA Bucket(s)/') ||
+    k.startsWith('Select_KRA_Bucket') && k.includes('/')
+  );
 
-// ── KRAs from one record ───────────────────────────────────
-// The select_multiple combined field returns space-separated internal names
-// Mirrors Power Query: UnpivotKRA + KeepSelectedOnly (not null/false/0)
-function getKRAs(rec){
-  const raw=String(gv(rec,fieldMap.kra)||'').trim();
-  if(!raw||raw==='false'||raw==='0')return[];
-  return raw.split(/\s+/)
-    .filter(k=>k&&k!=='false'&&k!=='0')
-    .map(k=>KRA_LABELS[k.trim()]||k.trim().replace(/_/g,' '));
-}
+  activitiesTable = [];
+  kraTable        = [];
 
-// ── Total minutes (positive only, mirrors DAX Reported Minutes) ─
-function totalMins(data){
-  let t=0;
-  data.forEach(rec=>{
-    durCols.forEach(col=>{
-      let v=parseFloat(rec[col]);
-      if(isNaN(v)||v<=0)return;
-      // Mirror Power Query: replace values > 1440 (e.g. erroneous 15120) with 1440
-      if(v>1440)v=1440;
-      t+=v;
-    });
+  rawData.forEach(rec => {
+    const staffName  = String(gv(rec, fieldMap.name) || '').trim();
+    if (!staffName) return;
+
+    const base = {
+      staffName,
+      date:        String(gv(rec, fieldMap.date)        || ''),
+      lab:         String(gv(rec, fieldMap.lab)         || ''),
+      workingType: String(gv(rec, fieldMap.workType)    || ''),
+      courses:     String(gv(rec, fieldMap.courses)     || ''),
+      otherCourse: String(gv(rec, fieldMap.otherCourse) || ''),
+      sessions:    gv(rec, fieldMap.sessions),
+      uuid:        String(rec['_uuid'] || ''),
+    };
+
+    // ── Activities (Power Query: expand each activity/duration pair) ──────
+    // ActivityColumns = List.Select(cols, each Text.StartsWith(_, "Activity/Task Done"))
+    // DurationColumns = List.Select(cols, each Text.StartsWith(_, "Approx. Duration"))
+    // PairCount = List.Min({Count(act), Count(dur)})
+    // → one row per non-blank activity, paired with its duration
+    for (let i = 0; i < actCols.length; i++) {
+      const task = rec[actCols[i]];
+      if (!task || String(task).trim() === '' || String(task).toLowerCase() === 'false') continue;
+
+      const rawMins = i < durCols.length ? rec[durCols[i]] : null;
+      let mins = parseFloat(rawMins);
+      if (isNaN(mins) || mins <= 0) mins = null;
+      else if (mins > 1440) mins = 1440;  // mirror: Power Query ReplaceValue(15120 → 1440)
+
+      activitiesTable.push({
+        ...base,
+        actNo: i + 1,
+        task:  String(task).trim(),
+        mins,
+        hours: mins !== null ? mins / 60 : null,
+      });
+    }
+
+    // ── KRA (Power Query: unpivot boolean sub-columns, keep selected only) ─
+    // KeepSelectedOnly: KRA Value <> null AND <> "" AND <> "false" AND <> "0"
+    if (kraSubCols.length > 0) {
+      kraSubCols.forEach(col => {
+        const val = rec[col];
+        if (!val || val === false || String(val) === '0' || String(val).toLowerCase() === 'false') return;
+        // KRA Bucket = Text.AfterDelimiter([KRA Column], "Select KRA Bucket(s)/")
+        const bucket = col.split('/').slice(1).join('/').trim();
+        if (bucket) kraTable.push({ ...base, kraBucket: bucket });
+      });
+    } else {
+      // Fallback: combined space-separated field (internal names)
+      const combined = String(gv(rec, fieldMap.kra) || '').trim();
+      if (combined && combined !== 'false' && combined !== '0') {
+        combined.split(/\s+/).filter(k => k && k !== 'false' && k !== '0').forEach(k => {
+          kraTable.push({ ...base, kraBucket: KRA_LABELS[k.trim()] || k.trim().replace(/_/g, ' ') });
+        });
+      }
+    }
   });
-  return t;
+
+  console.log(`Transformed: ${activitiesTable.length} activity rows, ${kraTable.length} KRA rows`);
+  console.log('Activity cols:', actCols);
+  console.log('Duration cols:', durCols);
+  console.log('KRA sub-cols:', kraSubCols);
 }
 
-// ── Build user map ─────────────────────────────────────────
-function buildUserMap(){
-  userMap={};
-  allData.forEach(r=>{
-    const n=String(gv(r,fieldMap.name)||'').trim();
-    if(n){if(!userMap[n])userMap[n]=[];userMap[n].push(r);}
+// ── User map ──────────────────────────────────────────────
+function buildUserMap() {
+  userMap = {};
+  rawData.forEach(r => {
+    const n = String(gv(r, fieldMap.name) || '').trim();
+    if (n) { if (!userMap[n]) userMap[n] = []; userMap[n].push(r); }
   });
 }
 
-function fillDropdown(){
-  const sel=document.getElementById('nameSelect');
-  const names=Object.keys(userMap).sort();
-  if(!names.length){sel.innerHTML='<option value="">No names found — check ⚙ Field Config</option>';return;}
-  sel.innerHTML='<option value="">— Select name —</option>'+
-    names.map(n=>`<option value="${esc(n)}">${esc(n)} (${userMap[n].length} day${userMap[n].length!==1?'s':''})</option>`).join('');
-  document.getElementById('loginBtn').disabled=false;
+function fillDropdown() {
+  const sel = document.getElementById('nameSelect');
+  const names = Object.keys(userMap).sort();
+  if (!names.length) { sel.innerHTML = '<option value="">No names found — check ⚙ Field Config</option>'; return; }
+  sel.innerHTML = '<option value="">— Select name —</option>' +
+    names.map(n => `<option value="${esc(n)}">${esc(n)} (${userMap[n].length} day${userMap[n].length !== 1 ? 's' : ''})</option>`).join('');
+  document.getElementById('loginBtn').disabled = false;
 }
 
 // ── Login / Logout ────────────────────────────────────────
-function doLogin(){
-  const name=document.getElementById('nameSelect').value.trim();
-  if(!name){const e=document.getElementById('lerr');e.textContent='Please select your name.';e.style.display='block';return;}
-  currentUser=name;
-  userData=userMap[name]||[];
-  document.getElementById('userChip').textContent='👤 '+name;
-  document.getElementById('userChip').style.display='inline-block';
-  document.getElementById('logoutBtn').style.display='inline-flex';
-  document.getElementById('navSub').textContent='Viewing: '+name;
-  setDateDefaults();fillWTFilter();applyFilters();setupCfg();
-  document.getElementById('loginWrap').style.display='none';
-  document.getElementById('dash').style.display='block';
+function doLogin() {
+  const name = document.getElementById('nameSelect').value.trim();
+  if (!name) { const e = document.getElementById('lerr'); e.textContent = 'Please select your name.'; e.style.display = 'block'; return; }
+  currentUser = name;
+  userData = userMap[name] || [];
+  document.getElementById('userChip').textContent = '👤 ' + name;
+  document.getElementById('userChip').style.display = 'inline-block';
+  document.getElementById('logoutBtn').style.display = 'inline-flex';
+  document.getElementById('navSub').textContent = 'Viewing: ' + name;
+  setDateDefaults();
+  fillWTFilter();
+  applyFilters();
+  setupCfg();
+  document.getElementById('loginWrap').style.display = 'none';
+  document.getElementById('dash').style.display = 'block';
 }
 
-function doLogout(){
-  currentUser=null;userData=[];
-  document.getElementById('userChip').style.display='none';
-  document.getElementById('logoutBtn').style.display='none';
-  document.getElementById('navSub').textContent='Personal Dashboard';
-  document.getElementById('dash').style.display='none';
-  document.getElementById('loginWrap').style.display='flex';
-  if(CHS.pie){CHS.pie.destroy();delete CHS.pie;}
-  if(CHS.bar){CHS.bar.destroy();delete CHS.bar;}
+function doLogout() {
+  currentUser = null; userData = [];
+  document.getElementById('userChip').style.display = 'none';
+  document.getElementById('logoutBtn').style.display = 'none';
+  document.getElementById('navSub').textContent = 'Personal Dashboard';
+  document.getElementById('dash').style.display = 'none';
+  document.getElementById('loginWrap').style.display = 'flex';
+  if (CHS.pie) { CHS.pie.destroy(); delete CHS.pie; }
+  if (CHS.bar) { CHS.bar.destroy(); delete CHS.bar; }
 }
 
-function setDateDefaults(){
-  const dates=userData.map(r=>parseD(gv(r,fieldMap.date))).filter(Boolean).sort();
-  if(dates.length){document.getElementById('dfrom').value=dates[0];document.getElementById('dto').value=dates[dates.length-1];}
+function setDateDefaults() {
+  const dates = userData.map(r => parseD(String(gv(r, fieldMap.date) || ''))).filter(Boolean).sort();
+  if (dates.length) {
+    document.getElementById('dfrom').value = dates[0];
+    document.getElementById('dto').value   = dates[dates.length - 1];
+  }
 }
 
-function fillWTFilter(){
-  const sel=document.getElementById('wtf');
-  const types=[...new Set(userData.map(r=>String(gv(r,fieldMap.workType)||'').trim()).filter(Boolean))].sort();
-  sel.innerHTML='<option value="">All Types</option>'+types.map(t=>`<option value="${esc(t)}">${esc(t)}</option>`).join('');
+function fillWTFilter() {
+  const sel = document.getElementById('wtf');
+  const types = [...new Set(userData.map(r => String(gv(r, fieldMap.workType) || '').trim()).filter(Boolean))].sort();
+  sel.innerHTML = '<option value="">All Types</option>' + types.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join('');
 }
 
-function getFiltered(){
-  const from=document.getElementById('dfrom').value;
-  const to=document.getElementById('dto').value;
-  const wt=document.getElementById('wtf').value;
-  return userData.filter(r=>{
-    const d=parseD(gv(r,fieldMap.date));
-    if(from&&d&&d<from)return false;
-    if(to&&d&&d>to)return false;
-    if(wt&&String(gv(r,fieldMap.workType)||'')!==wt)return false;
+// ── Filtering — applied to all three tables ───────────────
+function getFiltered() {
+  const from = document.getElementById('dfrom').value;
+  const to   = document.getElementById('dto').value;
+  const wt   = document.getElementById('wtf').value;
+
+  const inRange = (dateStr, wType) => {
+    const d = parseD(dateStr);
+    if (from && d && d < from) return false;
+    if (to   && d && d > to)   return false;
+    if (wt   && wType !== wt)  return false;
     return true;
-  });
+  };
+
+  return {
+    records:    userData.filter(r => inRange(String(gv(r, fieldMap.date) || ''), String(gv(r, fieldMap.workType) || ''))),
+    activities: activitiesTable.filter(r => r.staffName === currentUser && inRange(r.date, r.workingType)),
+    kra:        kraTable.filter(r => r.staffName === currentUser && inRange(r.date, r.workingType)),
+  };
 }
 
-function resetFilters(){
-  document.getElementById('dfrom').value='';
-  document.getElementById('dto').value='';
-  document.getElementById('wtf').value='';
+function resetFilters() {
+  document.getElementById('dfrom').value = '';
+  document.getElementById('dto').value   = '';
+  document.getElementById('wtf').value   = '';
   applyFilters();
 }
 
-function applyFilters(){
-  const d=getFiltered();
-  renderKPIs(d);renderCharts(d);renderTables(d);
+function applyFilters() {
+  const { records, activities, kra } = getFiltered();
+  renderKPIs(records, activities, kra);
+  renderCharts(records, kra);
+  renderTables(records, activities);
 }
 
-// ── KPIs — matching DAX measures exactly ─────────────────
-function renderKPIs(d){
+// ── KPIs ──────────────────────────────────────────────────
+function renderKPIs(records, activities, kra) {
   // Total Submissions = COUNTROWS('Karigar - Daily Reporting')
-  set('k0',d.length);
-  document.getElementById('k0s').textContent='of '+userData.length+' total';
+  set('k0', records.length);
+  document.getElementById('k0s').textContent = 'of ' + userData.length + ' total';
 
-  // Lab/Field Reports = COUNTROWS(FILTER(..., Working Type IN {Lab,Field}))
-  // (DAX also groups by Staff+Date but since we filter to one person it's the same)
-  set('k1',d.filter(r=>{
-    const t=String(gv(r,fieldMap.workType)||'').toLowerCase();
-    return t==='lab'||t==='field';
+  // Lab/Field Reports = COUNTROWS(FILTER(..., Working Type IN {Lab, Field}))
+  set('k1', records.filter(r => {
+    const t = String(gv(r, fieldMap.workType) || '').toLowerCase();
+    return t === 'lab' || t === 'field';
   }).length);
 
   // Total Sessions = SUM('Karigar - Daily Reporting'[Number of Sessions])
-  let ses=0;d.forEach(r=>{const v=parseFloat(gv(r,fieldMap.sessions));if(!isNaN(v)&&v>0)ses+=v;});
-  set('k2',ses||'—');
+  let ses = 0;
+  records.forEach(r => { const v = parseFloat(gv(r, fieldMap.sessions)); if (!isNaN(v) && v > 0) ses += v; });
+  set('k2', ses || '—');
 
-  // Count of Course(s) = count of non-blank Course(s) entries
-  set('k3',d.filter(r=>String(gv(r,fieldMap.courses)||'').trim()).length||'—');
+  // Count of Course(s) = COUNTA of non-blank Course(s)
+  set('k3', records.filter(r => String(gv(r, fieldMap.courses) || '').trim()).length || '—');
 
-  // KRA Activities = COUNTROWS(KRA) = total unpivoted KRA rows
-  let kraTotal=0;d.forEach(r=>kraTotal+=getKRAs(r).length);
-  set('k4',kraTotal||'—');
+  // KRA Activities = COUNTROWS(KRA) — total unpivoted KRA rows
+  set('k4', kra.length || '—');
 
   // Reported Hours = SUM(Activities[Duration > 0]) / 60
-  const mins=totalMins(d);
-  set('k5',mins>0?fmtHrs(mins):'—');
+  const totalM = activities.reduce((s, a) => s + (a.mins || 0), 0);
+  set('k5', totalM > 0 ? fmtHrs(totalM) : '—');
 }
 
 // ── Charts ────────────────────────────────────────────────
-function renderCharts(d){
+function renderCharts(records, kra) {
   // ── Pie: Working Type ──
-  const tMap={};
-  d.forEach(r=>{const t=String(gv(r,fieldMap.workType)||'Other').trim()||'Other';tMap[t]=(tMap[t]||0)+1;});
-  const pL=Object.keys(tMap),pD=Object.values(tMap);
-  const pC=pL.map(l=>wtColor(l));
-  if(CHS.pie)CHS.pie.destroy();
-  if(pD.length){
-    CHS.pie=new Chart(document.getElementById('pieC').getContext('2d'),{
-      type:'doughnut',
-      data:{labels:pL,datasets:[{data:pD,backgroundColor:pC,borderWidth:2,borderColor:'#fff',hoverOffset:4}]},
-      options:{responsive:true,maintainAspectRatio:false,cutout:'55%',
-        plugins:{
-          legend:{position:'bottom',labels:{boxWidth:10,padding:10,font:{size:10}}},
-          datalabels:{
-            display:ctx=>ctx.dataset.data[ctx.dataIndex]>0,
-            formatter:value=>value,
-            color:'#fff',
-            font:{weight:'700',size:11},
-            textAlign:'center',
-            textShadowBlur:4,
-            textShadowColor:'rgba(0,0,0,.4)'
+  const tMap = {};
+  records.forEach(r => {
+    const t = String(gv(r, fieldMap.workType) || 'Other').trim() || 'Other';
+    tMap[t] = (tMap[t] || 0) + 1;
+  });
+  const pL = Object.keys(tMap), pD = Object.values(tMap);
+  const pC = pL.map(l => wtColor(l));
+  if (CHS.pie) CHS.pie.destroy();
+  if (pD.length) {
+    CHS.pie = new Chart(document.getElementById('pieC').getContext('2d'), {
+      type: 'doughnut',
+      data: { labels: pL, datasets: [{ data: pD, backgroundColor: pC, borderWidth: 2, borderColor: '#fff', hoverOffset: 4 }] },
+      options: {
+        responsive: true, maintainAspectRatio: false, cutout: '55%',
+        plugins: {
+          legend: { position: 'bottom', labels: { boxWidth: 10, padding: 10, font: { size: 10 } } },
+          datalabels: {
+            display: ctx => ctx.dataset.data[ctx.dataIndex] > 0,
+            formatter: value => value,
+            color: '#fff', font: { weight: '700', size: 11 },
+            textShadowBlur: 4, textShadowColor: 'rgba(0,0,0,.4)'
           }
         }
       }
     });
   }
 
-  // ── Horizontal Bar: KRA Distribution (matches Power BI layout) ──
-  const kMap={};
-  d.forEach(r=>getKRAs(r).forEach(lbl=>{kMap[lbl]=(kMap[lbl]||0)+1;}));
-  // Sort descending by count (matches Power BI)
-  const bEntries=Object.entries(kMap).sort((a,b)=>b[1]-a[1]);
-  const bL=bEntries.map(e=>e[0]);
-  const bD=bEntries.map(e=>e[1]);
+  // ── Horizontal Bar: KRA Distribution ──
+  // kra[] is already one-row-per-bucket (from transformData), just count by bucket name
+  const kMap = {};
+  kra.forEach(r => { kMap[r.kraBucket] = (kMap[r.kraBucket] || 0) + 1; });
+  const bEntries = Object.entries(kMap).sort((a, b) => b[1] - a[1]);
+  const bL = bEntries.map(e => e[0]);
+  const bD = bEntries.map(e => e[1]);
+  const barH = Math.max(160, bL.length * 30 + 40);
+  document.getElementById('kraWrap').style.height = barH + 'px';
 
-  // Dynamic height: ~28px per bar
-  const barH=Math.max(160,bL.length*30+40);
-  document.getElementById('kraWrap').style.height=barH+'px';
-
-  if(CHS.bar)CHS.bar.destroy();
-  if(bD.length){
-    CHS.bar=new Chart(document.getElementById('barC').getContext('2d'),{
-      type:'bar',
-      data:{labels:bL,datasets:[{data:bD,backgroundColor:'#4F46E5',borderRadius:3,barThickness:18}]},
-      options:{
-        indexAxis:'y',
-        responsive:true,maintainAspectRatio:false,
-        layout:{padding:{right:32}},
-        plugins:{
-          legend:{display:false},
-          tooltip:{callbacks:{title:items=>[bL[items[0].dataIndex]]}},
-          datalabels:{
-            anchor:'end',
-            align:'end',
-            formatter:value=>value,
-            color:'#475569',
-            font:{weight:'700',size:11}
-          }
+  if (CHS.bar) CHS.bar.destroy();
+  if (bD.length) {
+    CHS.bar = new Chart(document.getElementById('barC').getContext('2d'), {
+      type: 'bar',
+      data: { labels: bL, datasets: [{ data: bD, backgroundColor: '#4F46E5', borderRadius: 3, barThickness: 18 }] },
+      options: {
+        indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+        layout: { padding: { right: 32 } },
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { title: items => [bL[items[0].dataIndex]] } },
+          datalabels: { anchor: 'end', align: 'end', formatter: v => v, color: '#475569', font: { weight: '700', size: 11 } }
         },
-        scales:{
-          x:{beginAtZero:true,ticks:{stepSize:1,font:{size:10}},
-             grid:{color:'#F1F5F9'},title:{display:true,text:'KRA Count',font:{size:10},color:'#94A3B8'}},
-          y:{ticks:{font:{size:10}},grid:{display:false}}
+        scales: {
+          x: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 10 } }, grid: { color: '#F1F5F9' }, title: { display: true, text: 'KRA Count', font: { size: 10 }, color: '#94A3B8' } },
+          y: { ticks: { font: { size: 10 } }, grid: { display: false } }
         }
       }
     });
@@ -668,242 +727,229 @@ function renderCharts(d){
 }
 
 // ── Tables ────────────────────────────────────────────────
-function renderTables(d){
-  const sorted=[...d].sort((a,b)=>parseD(gv(b,fieldMap.date)).localeCompare(parseD(gv(a,fieldMap.date))));
+function renderTables(records, activities) {
+  const byDate = (a, b) => parseD(b.date || String(gv(b, fieldMap?.date) || '')).localeCompare(parseD(a.date || String(gv(a, fieldMap?.date) || '')));
+  const sortedRec = [...records].sort((a, b) => parseD(String(gv(b, fieldMap.date)||'')).localeCompare(parseD(String(gv(a, fieldMap.date)||''))));
+  const sortedAct = [...activities].sort((a, b) => parseD(b.date).localeCompare(parseD(a.date)));
 
-  // Sessions & Courses — one row per submission, matching Power BI layout (Image 2)
-  const sb=document.getElementById('tSC');
-  set('scCnt',sorted.length+' rows');
-  let totalSessions=0;
-  let totalActiveDays=0;
-  const scRows=sorted.map(r=>{
-    const dt=fmtDate(gv(r,fieldMap.date));
-    const crs=String(gv(r,fieldMap.courses)||'—');
-    const other=String(gv(r,fieldMap.otherCourse)||'—');
-    const lab=String(gv(r,fieldMap.lab)||'—');
-    const wt=String(gv(r,fieldMap.workType)||'—');
-    const sesRaw=gv(r,fieldMap.sessions);
-    const sesNum=parseFloat(sesRaw);
-    const ses=!isNaN(sesNum)&&sesNum>0?sesNum:'—';
-    if(!isNaN(sesNum)&&sesNum>0)totalSessions+=sesNum;
-    const wtLow=wt.toLowerCase();
-    if(wtLow==='lab'||wtLow==='field')totalActiveDays++;
-    return`<tr>
-      <td style="white-space:nowrap">${esc(dt)}</td>
+  // ── Sessions & Courses (one row per submission) ───────────
+  const sb = document.getElementById('tSC');
+  set('scCnt', sortedRec.length + ' rows');
+  let totalSes = 0;
+  const scRows = sortedRec.map(r => {
+    const crs   = String(gv(r, fieldMap.courses)     || '—');
+    const other = String(gv(r, fieldMap.otherCourse) || '—');
+    const lab   = String(gv(r, fieldMap.lab)         || '—');
+    const wt    = String(gv(r, fieldMap.workType)    || '—');
+    const sesV  = parseFloat(gv(r, fieldMap.sessions));
+    const ses   = !isNaN(sesV) && sesV > 0 ? sesV : '—';
+    if (!isNaN(sesV) && sesV > 0) totalSes += sesV;
+    return `<tr>
+      <td style="white-space:nowrap">${esc(fmtDate(String(gv(r, fieldMap.date)||'')))}</td>
       <td>${esc(crs)}</td>
-      <td>${other==='—'?'<span style="color:var(--faint)">—</span>':esc(other)}</td>
-      <td>${lab==='—'?'<span style="color:var(--faint)">—</span>':esc(lab)}</td>
+      <td>${other === '—' ? '<span style="color:var(--faint)">—</span>' : esc(other)}</td>
+      <td>${lab === '—' ? '<span style="color:var(--faint)">—</span>' : esc(lab)}</td>
       <td>${wtBadge(wt)}</td>
       <td style="text-align:right">${esc(String(ses))}</td>
     </tr>`;
   });
-  // Total row — matching Power BI Sessions & Courses footer
-  const scTotal=sorted.length
+  const scTotal = sortedRec.length
     ? `<tr style="font-weight:700;border-top:2px solid var(--b2)">
         <td colspan="5" style="padding:8px 12px">Total</td>
-        <td style="text-align:right;padding:8px 12px">${totalSessions||'—'}</td>
-       </tr>`
-    : '';
-  sb.innerHTML=sorted.length
-    ? scRows.join('')+scTotal
-    : `<tr><td colspan="6" class="empty">No data</td></tr>`;
+        <td style="text-align:right;padding:8px 12px">${totalSes || '—'}</td>
+       </tr>` : '';
+  sb.innerHTML = sortedRec.length ? scRows.join('') + scTotal : `<tr><td colspan="6" class="empty">No data</td></tr>`;
 
-  // Activities Done — one row per activity (expanded), with Total row at bottom
-  const ab=document.getElementById('tAct');
-  const actRows=[];
-  let totalMinsAct=0;
-  sorted.forEach(r=>{
-    const dt=fmtDate(gv(r,fieldMap.date));
-    const wt=String(gv(r,fieldMap.workType)||'—');
-    const acts=getActivities(r);
-    acts.forEach(a=>{
-      const hrs=a.mins!==null?fmtHrs(a.mins):'—';
-      if(a.mins!==null)totalMinsAct+=a.mins;
-      actRows.push(
-        `<tr>
-          <td style="white-space:nowrap">${esc(dt)}</td>
-          <td>${wtBadge(wt)}</td>
-          <td>${esc(a.task)}</td>
-          <td style="white-space:nowrap;text-align:right">${esc(hrs)}</td>
-        </tr>`
-      );
-    });
+  // ── Activities Done (one row per activity, from activitiesTable) ──────────
+  // Each row: date | working type | activity text | hours (= duration ÷ 60)
+  const ab = document.getElementById('tAct');
+  set('actCnt', sortedAct.length + ' activities');
+  let totalMinsAct = 0;
+  const actRows = sortedAct.map(a => {
+    if (a.mins !== null) totalMinsAct += a.mins;
+    const hrs = a.hours !== null ? (a.hours).toFixed(2) : '—';
+    return `<tr>
+      <td style="white-space:nowrap">${esc(fmtDate(a.date))}</td>
+      <td>${wtBadge(a.workingType)}</td>
+      <td>${esc(a.task)}</td>
+      <td style="text-align:right;white-space:nowrap">${esc(hrs)}</td>
+    </tr>`;
   });
-  // Total row — matches Power BI total at bottom of Activities Done table
-  const totalRow=actRows.length
+  const actTotal = sortedAct.length
     ? `<tr style="font-weight:700;border-top:2px solid var(--b2)">
         <td colspan="3" style="padding:8px 12px">Total</td>
-        <td style="text-align:right;padding:8px 12px">${(totalMinsAct/60).toFixed(2)}</td>
-       </tr>`
-    : '';
-  set('actCnt',actRows.length+' activities');
-  ab.innerHTML=actRows.length
-    ? actRows.join('')+totalRow
-    : `<tr><td colspan="4" class="empty">No activities found — check ⚙ Field Config</td></tr>`;
+        <td style="text-align:right;padding:8px 12px">${(totalMinsAct / 60).toFixed(2)}</td>
+       </tr>` : '';
+  ab.innerHTML = actRows.length ? actRows.join('') + actTotal : `<tr><td colspan="4" class="empty">No activities found</td></tr>`;
 }
 
 // ── Excel download — 4 sheets matching Power BI tables ────
-function doDownload(){
-  const d=getFiltered();
-  if(!d.length){alert('No data for selected filters.');return;}
-  try{
-    const wb=XLSX.utils.book_new();
-    const sorted=[...d].sort((a,b)=>parseD(gv(b,fieldMap.date)).localeCompare(parseD(gv(a,fieldMap.date))));
-    const mins=totalMins(d);
-    let kraTotal=0;d.forEach(r=>kraTotal+=getKRAs(r).length);
+function doDownload() {
+  const { records, activities, kra } = getFiltered();
+  if (!records.length) { alert('No data for selected filters.'); return; }
+  try {
+    const wb = XLSX.utils.book_new();
+    const totalM = activities.reduce((s, a) => s + (a.mins || 0), 0);
+    let kraTotal = kra.length, sesTot = 0;
+    records.forEach(r => { const v = parseFloat(gv(r, fieldMap.sessions)); if (!isNaN(v) && v > 0) sesTot += v; });
 
     // Summary
-    const sumRows=[
-      ['Karigar Daily Report — '+currentUser],[''],
-      ['From',document.getElementById('dfrom').value],
-      ['To',document.getElementById('dto').value],
-      ['Generated',new Date().toLocaleString()],[''],
-      ['Metric','Value'],
-      ['Total Submissions',d.length],
-      ['Lab/Field Reports',d.filter(r=>{const t=String(gv(r,fieldMap.workType)||'').toLowerCase();return t==='lab'||t==='field';}).length],
-      ['Total Sessions',(()=>{let s=0;d.forEach(r=>{const v=parseFloat(gv(r,fieldMap.sessions));if(!isNaN(v)&&v>0)s+=v;});return s||'N/A'})()],
-      ['Count of Course(s)',d.filter(r=>String(gv(r,fieldMap.courses)||'').trim()).length],
-      ['KRA Activities',kraTotal],
-      ['Reported Hours',mins>0?fmtHrs(mins):'N/A'],
-    ];
-    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(sumRows),'Summary');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([
+      ['Karigar Daily Report — ' + currentUser], [''],
+      ['From', document.getElementById('dfrom').value],
+      ['To',   document.getElementById('dto').value],
+      ['Generated', new Date().toLocaleString()], [''],
+      ['Metric', 'Value'],
+      ['Total Submissions', records.length],
+      ['Lab/Field Reports', records.filter(r => { const t = String(gv(r,fieldMap.workType)||'').toLowerCase(); return t==='lab'||t==='field'; }).length],
+      ['Total Sessions', sesTot || 'N/A'],
+      ['Count of Course(s)', records.filter(r => String(gv(r,fieldMap.courses)||'').trim()).length],
+      ['KRA Activities', kraTotal],
+      ['Reported Hours', totalM > 0 ? (totalM/60).toFixed(2) : 'N/A'],
+    ]), 'Summary');
 
     // Sessions & Courses
-    const scRows=sorted.map(r=>({
-      'Date':parseD(gv(r,fieldMap.date)),
-      'Course(s)':String(gv(r,fieldMap.courses)||''),
-      'Other Course Name':String(gv(r,fieldMap.otherCourse)||''),
-      'Select Lab':String(gv(r,fieldMap.lab)||''),
-      'Working Type':String(gv(r,fieldMap.workType)||''),
-      'Number of Sessions':gv(r,fieldMap.sessions)||'',
-    }));
-    XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(scRows),'Sessions & Courses');
+    const scSorted = [...records].sort((a,b) => parseD(String(gv(b,fieldMap.date)||'')).localeCompare(parseD(String(gv(a,fieldMap.date)||''))));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(
+      scSorted.map(r => ({
+        'Date':               parseD(String(gv(r,fieldMap.date)||'')),
+        'Course(s)':          String(gv(r,fieldMap.courses)||''),
+        'Other Course Name':  String(gv(r,fieldMap.otherCourse)||''),
+        'Select Lab':         String(gv(r,fieldMap.lab)||''),
+        'Working Type':       String(gv(r,fieldMap.workType)||''),
+        'Number of Sessions': gv(r,fieldMap.sessions)||'',
+      }))
+    ), 'Sessions & Courses');
 
-    // Activities (expanded — matches Activities Power Query table)
-    const actRows=[];
-    sorted.forEach(r=>{
-      const dt=parseD(gv(r,fieldMap.date));
-      const lab=String(gv(r,fieldMap.lab)||'');
-      const wt=String(gv(r,fieldMap.workType)||'');
-      getActivities(r).forEach(a=>{
-        actRows.push({
-          'Date':dt,'Select Lab':lab,'Staff Name':currentUser,'Working Type':wt,
-          'Activity/Task Done':a.task,
-          'Approx. Duration (mins)':a.mins??'',
-          'Hours':a.mins!=null?parseFloat(fmtHrs(a.mins)):'',
-        });
-      });
-    });
-    if(actRows.length)XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(actRows),'Activities');
+    // Activities (expanded — one row per activity)
+    const actSorted = [...activities].sort((a,b) => parseD(b.date).localeCompare(parseD(a.date)));
+    if (actSorted.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(
+      actSorted.map(a => ({
+        'Date':                   a.date,
+        'Select Lab':             a.lab,
+        'Working Type':           a.workingType,
+        'Activity/Task Done':     a.task,
+        'Approx. Duration (mins)':a.mins ?? '',
+        'Hours':                  a.hours !== null ? parseFloat(a.hours.toFixed(2)) : '',
+      }))
+    ), 'Activities');
 
-    // KRA (matches KRA Power Query table)
-    const kraRows=[];
-    sorted.forEach(r=>{
-      const dt=parseD(gv(r,fieldMap.date));
-      const lab=String(gv(r,fieldMap.lab)||'');
-      const wt=String(gv(r,fieldMap.workType)||'');
-      getKRAs(r).forEach(bucket=>{
-        kraRows.push({'Date':dt,'Select Lab':lab,'Staff Name':currentUser,'Working Type':wt,'KRA Bucket':bucket});
-      });
-    });
-    if(kraRows.length)XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(kraRows),'KRA');
+    // KRA (expanded — one row per KRA bucket)
+    const kraSorted = [...kra].sort((a,b) => parseD(b.date).localeCompare(parseD(a.date)));
+    if (kraSorted.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(
+      kraSorted.map(r => ({
+        'Date':         r.date,
+        'Select Lab':   r.lab,
+        'Working Type': r.workingType,
+        'KRA Bucket':   r.kraBucket,
+      }))
+    ), 'KRA');
 
-    XLSX.writeFile(wb,`${currentUser.replace(/\s+/g,'_')}_DailyReport_${new Date().toISOString().slice(0,10)}.xlsx`);
-  }catch(e){alert('Download error: '+e.message);}
+    XLSX.writeFile(wb, `${currentUser.replace(/\s+/g,'_')}_DailyReport_${new Date().toISOString().slice(0,10)}.xlsx`);
+  } catch(e) { alert('Download error: ' + e.message); }
 }
 
 // ── Field Config ──────────────────────────────────────────
-function setupCfg(){
-  const vis=allKeys.filter(k=>!k.startsWith('_')||k==='_submission_time');
-  document.getElementById('cfgFields').textContent=vis.join(', ');
+function setupCfg() {
+  const vis = allKeys.filter(k => !k.startsWith('_') || k === '_submission_time');
+  document.getElementById('cfgFields').textContent = vis.join(', ');
 
-  // Show detected activity & duration columns for debugging
-  const actInfo = actCols.length
-    ? '✓ Activity cols ('+actCols.length+'): '+actCols.join(', ')
-    : '✗ No activity columns detected — hours will show —';
-  const durInfo = durCols.length
-    ? '✓ Duration cols ('+durCols.length+'): '+durCols.join(', ')
-    : '✗ No duration columns detected — hours will show —';
+  const actInfo = actCols.length ? `✓ ${actCols.length} cols: ${actCols.join(', ')}` : '✗ None detected';
+  const durInfo = durCols.length ? `✓ ${durCols.length} cols: ${durCols.join(', ')}` : '✗ None detected — hours will show —';
+  const kraInfo = kraSubCols.length ? `✓ ${kraSubCols.length} cols found` : '✗ None — using combined KRA field';
 
-  document.getElementById('cfgGrid').innerHTML=
+  document.getElementById('cfgGrid').innerHTML =
     `<div class="cfgf" style="grid-column:1/-1">
-       <label>Detected Activity Columns</label>
-       <div style="font-size:11px;font-family:var(--mono);background:var(--bg);border:1px solid var(--b);border-radius:6px;padding:6px 10px;color:${actCols.length?'#16A34A':'#c0392b'};word-break:break-all">${actInfo}</div>
+       <label>Activity Columns (auto-detected)</label>
+       <div style="font-size:10.5px;font-family:var(--mono);background:var(--bg);border:1px solid var(--b);border-radius:6px;padding:6px 10px;color:${actCols.length?'#16A34A':'#c0392b'};word-break:break-all">${actInfo}</div>
      </div>
      <div class="cfgf" style="grid-column:1/-1">
-       <label>Detected Duration Columns</label>
-       <div style="font-size:11px;font-family:var(--mono);background:var(--bg);border:1px solid var(--b);border-radius:6px;padding:6px 10px;color:${durCols.length?'#16A34A':'#c0392b'};word-break:break-all">${durInfo}</div>
-     </div>`+
-    Object.entries({name:'Staff Name',date:'Date',lab:'Select Lab',workType:'Working Type',
-                     sessions:'Number of Sessions',courses:'Course(s)',otherCourse:'Other Course Name',kra:'KRA Bucket Field'})
-    .map(([t,l])=>`<div class="cfgf"><label>${l}</label><select id="cfg_${t}"><option value="">— not set —</option>${allKeys.map(k=>`<option value="${esc(k)}"${fieldMap[t]===k?' selected':''}>${esc(k)}</option>`).join('')}</select></div>`).join('');
+       <label>Duration Columns (auto-detected)</label>
+       <div style="font-size:10.5px;font-family:var(--mono);background:var(--bg);border:1px solid var(--b);border-radius:6px;padding:6px 10px;color:${durCols.length?'#16A34A':'#c0392b'};word-break:break-all">${durInfo}</div>
+     </div>
+     <div class="cfgf" style="grid-column:1/-1">
+       <label>KRA Sub-Columns (auto-detected)</label>
+       <div style="font-size:10.5px;font-family:var(--mono);background:var(--bg);border:1px solid var(--b);border-radius:6px;padding:6px 10px;color:${kraSubCols.length?'#16A34A':'#D97706'};word-break:break-all">${kraInfo}</div>
+     </div>` +
+    Object.entries({
+      name:'Staff Name', date:'Date', lab:'Select Lab', workType:'Working Type',
+      sessions:'Number of Sessions', courses:'Course(s)', otherCourse:'Other Course Name', kra:'KRA Combined Field'
+    }).map(([t, l]) =>
+      `<div class="cfgf"><label>${l}</label>
+       <select id="cfg_${t}"><option value="">— not set —</option>
+       ${allKeys.map(k => `<option value="${esc(k)}"${fieldMap[t]===k?' selected':''}>${esc(k)}</option>`).join('')}
+       </select></div>`
+    ).join('');
 }
 
-function saveCfg(){
-  ['name','date','lab','workType','sessions','courses','kra','otherCourse'].forEach(t=>{
-    const e=document.getElementById('cfg_'+t);if(e&&e.value)fieldMap[t]=e.value;
+function saveCfg() {
+  ['name','date','lab','workType','sessions','courses','otherCourse','kra'].forEach(t => {
+    const e = document.getElementById('cfg_' + t);
+    if (e && e.value) fieldMap[t] = e.value;
   });
-  buildUserMap();fillDropdown();discoverActivityCols();applyFilters();
+  // Re-transform with updated field map
+  transformData();
+  buildUserMap();
+  fillDropdown();
+  applyFilters();
   document.getElementById('cfgB').classList.remove('open');
+  alert('Configuration saved and data re-transformed!');
 }
 
 // ── Main fetch ────────────────────────────────────────────
-async function fetchData(){
-  document.getElementById('bannerArea').innerHTML='';
-  document.getElementById('loginWrap').style.display='none';
-  document.getElementById('dash').style.display='none';
-  document.getElementById('loadArea').innerHTML=`<div class="ctr"><div class="spin-ring"></div>Loading submissions…</div>`;
-  document.getElementById('refreshBtn').disabled=true;
-  document.getElementById('navSub').textContent='Loading…';
-  const pill=document.getElementById('pill');
-  pill.className='pill on';document.getElementById('pillTxt').textContent='syncing';
+async function fetchData() {
+  document.getElementById('bannerArea').innerHTML = '';
+  document.getElementById('loginWrap').style.display = 'none';
+  document.getElementById('dash').style.display = 'none';
+  document.getElementById('loadArea').innerHTML = `<div class="ctr"><div class="spin-ring"></div>Loading and transforming data…</div>`;
+  document.getElementById('refreshBtn').disabled = true;
+  document.getElementById('navSub').textContent = 'Loading…';
+  const pill = document.getElementById('pill');
+  pill.className = 'pill on';
+  document.getElementById('pillTxt').textContent = 'syncing';
 
-  try{
-    allData=await fetchAllPages();
-    const ks=new Set();allData.slice(0,30).forEach(r=>Object.keys(r).forEach(k=>ks.add(k)));
-    allKeys=[...ks];
-    fieldMap=detectFields();
+  try {
+    rawData = await fetchAllPages();
 
-    // ── Smart date verification ───────────────────────────
-    // Prefer a field that contains just YYYY-MM-DD (the user-filled report date)
-    // over any datetime field (e.g. _submission_time = 2026-06-03T10:25:00)
-    if(allData.length){
-      const sample=allData.find(r=>r[fieldMap.date])||allData[0];
-      const curVal=String(sample[fieldMap.date]||'');
-      // If detected date field looks like a datetime, search for a pure date field
-      if(curVal.includes('T')||curVal.includes(' ')){
-        const pureDate=allKeys.find(k=>{
-          if(k==='_submission_time'||k==='_index'||k.startsWith('_'))return false;
-          const v=String(sample[k]||'');
-          return/^\d{4}-\d{2}-\d{2}$/.test(v);
-        });
-        if(pureDate)fieldMap.date=pureDate;
-      }
-    }
-    discoverActivityCols();
+    // Build allKeys from all records
+    const ks = new Set();
+    rawData.slice(0, 30).forEach(r => Object.keys(r).forEach(k => ks.add(k)));
+    allKeys = [...ks];
+
+    // 1. Detect field names
+    fieldMap = detectFields();
+
+    // 2. Transform: build activitiesTable and kraTable (mirrors Power Query)
+    transformData();
+
+    // 3. Build user map for login dropdown
     buildUserMap();
     fillDropdown();
-    document.getElementById('loginWrap').style.display='flex';
-    const t=new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
-    pill.className='pill on';
-    document.getElementById('pillTxt').textContent=t;
+
+    document.getElementById('loginWrap').style.display = 'flex';
+    pill.className = 'pill on';
+    document.getElementById('pillTxt').textContent = new Date().toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' });
     document.querySelector('#pill .dot').classList.remove('sp');
-    document.getElementById('navSub').textContent='Personal Dashboard';
-  }catch(e){
-    document.getElementById('bannerArea').innerHTML=`<div class="banner banner-err"><strong>Failed to load:</strong> ${e.message}</div>`;
-    document.getElementById('navSub').textContent='Error';
-    pill.className='pill';
+    document.getElementById('navSub').textContent = 'Personal Dashboard';
+
+    if (!rawData.length) {
+      document.getElementById('bannerArea').innerHTML = `<div class="banner banner-ok">Connected — no submissions found yet.</div>`;
+    }
+  } catch(e) {
+    document.getElementById('bannerArea').innerHTML = `<div class="banner banner-err"><strong>Failed to load:</strong> ${e.message}</div>`;
+    document.getElementById('navSub').textContent = 'Error';
+    pill.className = 'pill';
     console.error(e);
-  }finally{
-    document.getElementById('loadArea').innerHTML='';
-    document.getElementById('refreshBtn').disabled=false;
+  } finally {
+    document.getElementById('loadArea').innerHTML = '';
+    document.getElementById('refreshBtn').disabled = false;
   }
 }
 
-document.getElementById('nameSelect').addEventListener('change',function(){
-  document.getElementById('loginBtn').disabled=!this.value;
+document.getElementById('nameSelect').addEventListener('change', function() {
+  document.getElementById('loginBtn').disabled = !this.value;
 });
-window.onload=fetchData;
+window.onload = fetchData;
 </script>
 </body>
 </html>
