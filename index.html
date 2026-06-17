@@ -269,7 +269,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
       <div class="tw">
         <table class="dt">
           <thead><tr>
-            <th>Date</th><th>Lab</th><th>Working Type</th><th>Sessions</th><th>Course(s)</th>
+            <th>Date</th><th>Course(s)</th><th>Other Course</th><th>Select Lab</th><th>Working Type</th><th style="text-align:right">Sessions</th>
           </tr></thead>
           <tbody id="tSC"></tbody>
         </table>
@@ -349,11 +349,12 @@ const WT_COLS = {
 const CANDS = {
   name:     ['Staff Name','staff_name','your_name','name','_submitted_by'],
   date:     ['Date','date','report_date','today'],   // NOT _submission_time — use report date only
-  lab:      ['Select Lab','select_lab','lab','location','centre'],
+  lab:      ['Select Lab','Select_Lab','select_lab'],
   workType: ['Working Type','working_type','work_type','type_of_work'],
   sessions: ['Number of Sessions','number_of_sessions','sessions','no_sessions'],
   courses:  ['Course(s)','courses','course'],
   kra:      ['Select KRA Bucket(s)','select_kra_bucket_s_','kra','kra_buckets'],
+  otherCourse: ['Other Course Name','other_course_name','other_course','course_other'],
 };
 
 // ── State ─────────────────────────────────────────────────
@@ -670,20 +671,42 @@ function renderCharts(d){
 function renderTables(d){
   const sorted=[...d].sort((a,b)=>parseD(gv(b,fieldMap.date)).localeCompare(parseD(gv(a,fieldMap.date))));
 
-  // Sessions & Courses — one row per submission
+  // Sessions & Courses — one row per submission, matching Power BI layout (Image 2)
   const sb=document.getElementById('tSC');
   set('scCnt',sorted.length+' rows');
-  sb.innerHTML=sorted.length?sorted.map(r=>{
+  let totalSessions=0;
+  let totalActiveDays=0;
+  const scRows=sorted.map(r=>{
+    const dt=fmtDate(gv(r,fieldMap.date));
     const crs=String(gv(r,fieldMap.courses)||'—');
-    const ses=gv(r,fieldMap.sessions);
+    const other=String(gv(r,fieldMap.otherCourse)||'—');
+    const lab=String(gv(r,fieldMap.lab)||'—');
+    const wt=String(gv(r,fieldMap.workType)||'—');
+    const sesRaw=gv(r,fieldMap.sessions);
+    const sesNum=parseFloat(sesRaw);
+    const ses=!isNaN(sesNum)&&sesNum>0?sesNum:'—';
+    if(!isNaN(sesNum)&&sesNum>0)totalSessions+=sesNum;
+    const wtLow=wt.toLowerCase();
+    if(wtLow==='lab'||wtLow==='field')totalActiveDays++;
     return`<tr>
-      <td style="white-space:nowrap">${esc(fmtDate(gv(r,fieldMap.date)))}</td>
-      <td>${esc(String(gv(r,fieldMap.lab)||'—'))}</td>
-      <td>${wtBadge(String(gv(r,fieldMap.workType)||'—'))}</td>
-      <td>${esc(String(ses||'—'))}</td>
-      <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(crs)}">${esc(crs.length>28?crs.slice(0,28)+'…':crs)}</td>
+      <td style="white-space:nowrap">${esc(dt)}</td>
+      <td>${esc(crs)}</td>
+      <td>${other==='—'?'<span style="color:var(--faint)">—</span>':esc(other)}</td>
+      <td>${lab==='—'?'<span style="color:var(--faint)">—</span>':esc(lab)}</td>
+      <td>${wtBadge(wt)}</td>
+      <td style="text-align:right">${esc(String(ses))}</td>
     </tr>`;
-  }).join(''):`<tr><td colspan="5" class="empty">No data</td></tr>`;
+  });
+  // Total row — matching Power BI Sessions & Courses footer
+  const scTotal=sorted.length
+    ? `<tr style="font-weight:700;border-top:2px solid var(--b2)">
+        <td colspan="5" style="padding:8px 12px">Total</td>
+        <td style="text-align:right;padding:8px 12px">${totalSessions||'—'}</td>
+       </tr>`
+    : '';
+  sb.innerHTML=sorted.length
+    ? scRows.join('')+scTotal
+    : `<tr><td colspan="6" class="empty">No data</td></tr>`;
 
   // Activities Done — one row per activity (expanded), with Total row at bottom
   const ab=document.getElementById('tAct');
@@ -748,10 +771,11 @@ function doDownload(){
     // Sessions & Courses
     const scRows=sorted.map(r=>({
       'Date':parseD(gv(r,fieldMap.date)),
+      'Course(s)':String(gv(r,fieldMap.courses)||''),
+      'Other Course Name':String(gv(r,fieldMap.otherCourse)||''),
       'Select Lab':String(gv(r,fieldMap.lab)||''),
       'Working Type':String(gv(r,fieldMap.workType)||''),
       'Number of Sessions':gv(r,fieldMap.sessions)||'',
-      'Course(s)':String(gv(r,fieldMap.courses)||''),
     }));
     XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(scRows),'Sessions & Courses');
 
@@ -811,12 +835,12 @@ function setupCfg(){
        <div style="font-size:11px;font-family:var(--mono);background:var(--bg);border:1px solid var(--b);border-radius:6px;padding:6px 10px;color:${durCols.length?'#16A34A':'#c0392b'};word-break:break-all">${durInfo}</div>
      </div>`+
     Object.entries({name:'Staff Name',date:'Date',lab:'Select Lab',workType:'Working Type',
-                     sessions:'Number of Sessions',courses:'Course(s)',kra:'KRA Bucket Field'})
+                     sessions:'Number of Sessions',courses:'Course(s)',otherCourse:'Other Course Name',kra:'KRA Bucket Field'})
     .map(([t,l])=>`<div class="cfgf"><label>${l}</label><select id="cfg_${t}"><option value="">— not set —</option>${allKeys.map(k=>`<option value="${esc(k)}"${fieldMap[t]===k?' selected':''}>${esc(k)}</option>`).join('')}</select></div>`).join('');
 }
 
 function saveCfg(){
-  ['name','date','lab','workType','sessions','courses','kra'].forEach(t=>{
+  ['name','date','lab','workType','sessions','courses','kra','otherCourse'].forEach(t=>{
     const e=document.getElementById('cfg_'+t);if(e&&e.value)fieldMap[t]=e.value;
   });
   buildUserMap();fillDropdown();discoverActivityCols();applyFilters();
