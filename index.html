@@ -348,7 +348,7 @@ const WT_COLS = {
 // ── Field detection candidates (exact Power Query labels first) ─
 const CANDS = {
   name:     ['Staff Name','staff_name','your_name','name','_submitted_by'],
-  date:     ['Date','date','today','_submission_time'],
+  date:     ['Date','date','report_date','today'],   // NOT _submission_time — use report date only
   lab:      ['Select Lab','select_lab','lab','location','centre'],
   workType: ['Working Type','working_type','work_type','type_of_work'],
   sessions: ['Number of Sessions','number_of_sessions','sessions','no_sessions'],
@@ -370,6 +370,15 @@ function fmtDate(v){
   const[yr,mo,dy]=d.split('-');
   const M=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   return`${parseInt(dy)} ${M[parseInt(mo)-1]} ${yr}`;
+}
+// fmtHrs: convert minutes → clean hours string e.g. 90→"1.5 h", 60→"1 h", 100→"1.67 h"
+function fmtHrs(mins){
+  if(mins==null||isNaN(mins))return'—';
+  const h=mins/60;
+  // Round to 2 decimal places, then drop unnecessary trailing zeros
+  const rounded=Math.round(h*100)/100;
+  const str=rounded%1===0?String(rounded):rounded.toFixed(2).replace(/\.?0+$/,'');
+  return str+' h';
 }
 function wtColor(wt){
   const n=(wt||'').toLowerCase().replace(/\s+/g,'');
@@ -579,7 +588,7 @@ function renderKPIs(d){
 
   // Reported Hours = SUM(Activities[Duration > 0]) / 60
   const mins=totalMins(d);
-  set('k5',mins>0?(Math.round(mins/60*100)/100):'—');
+  set('k5',mins>0?fmtHrs(mins):'—');
 }
 
 // ── Charts ────────────────────────────────────────────────
@@ -682,8 +691,8 @@ function renderTables(d){
     const acts=getActivities(r);
     if(acts.length){
       acts.forEach(a=>{
-        // Hours = Approx. Duration (mins) / 60, matching DAX: Reported Hours = DIVIDE(Reported Minutes, 60)
-        const hrs=a.mins!==null?String(Math.round(a.mins/60*100)/100)+' h':'—';
+        // Hours = Duration (mins) ÷ 60, matching DAX Reported Hours
+        const hrs=a.mins!==null?fmtHrs(a.mins):'—';
         actRows.push(
           `<tr>
             <td style="white-space:nowrap">${esc(dt)}</td>
@@ -721,7 +730,7 @@ function doDownload(){
       ['Total Sessions',(()=>{let s=0;d.forEach(r=>{const v=parseFloat(gv(r,fieldMap.sessions));if(!isNaN(v)&&v>0)s+=v;});return s||'N/A'})()],
       ['Count of Course(s)',d.filter(r=>String(gv(r,fieldMap.courses)||'').trim()).length],
       ['KRA Activities',kraTotal],
-      ['Reported Hours',mins>0?Math.round(mins/60*100)/100:'N/A'],
+      ['Reported Hours',mins>0?fmtHrs(mins):'N/A'],
     ];
     XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(sumRows),'Summary');
 
@@ -746,7 +755,7 @@ function doDownload(){
           'Date':dt,'Select Lab':lab,'Staff Name':currentUser,'Working Type':wt,
           'Activity/Task Done':a.task,
           'Approx. Duration (mins)':a.mins??'',
-          'Hours':a.mins!=null?Math.round(a.mins/60*100)/100:'',
+          'Hours':a.mins!=null?fmtHrs(a.mins):'',
         });
       });
     });
@@ -802,6 +811,23 @@ async function fetchData(){
     const ks=new Set();allData.slice(0,30).forEach(r=>Object.keys(r).forEach(k=>ks.add(k)));
     allKeys=[...ks];
     fieldMap=detectFields();
+
+    // ── Smart date verification ───────────────────────────
+    // Prefer a field that contains just YYYY-MM-DD (the user-filled report date)
+    // over any datetime field (e.g. _submission_time = 2026-06-03T10:25:00)
+    if(allData.length){
+      const sample=allData.find(r=>r[fieldMap.date])||allData[0];
+      const curVal=String(sample[fieldMap.date]||'');
+      // If detected date field looks like a datetime, search for a pure date field
+      if(curVal.includes('T')||curVal.includes(' ')){
+        const pureDate=allKeys.find(k=>{
+          if(k==='_submission_time'||k==='_index'||k.startsWith('_'))return false;
+          const v=String(sample[k]||'');
+          return/^\d{4}-\d{2}-\d{2}$/.test(v);
+        });
+        if(pureDate)fieldMap.date=pureDate;
+      }
+    }
     discoverActivityCols();
     buildUserMap();
     fillDropdown();
