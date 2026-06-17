@@ -393,19 +393,37 @@ function wtBadge(wt) {
   return `<span class="badge" style="background:${c}18;color:${c};border:1px solid ${c}30">${esc(wt||'—')}</span>`;
 }
 
-// ── Fetch — same proven pattern as Karigar Batch Tracker ─────
+// ── Fetch — uses the same XLSX export your Power Query uses ──
+// This gives exact label-based column names: "Activity/Task Done",
+// "Approx. Duration (mins)", "Select KRA Bucket(s)/Session & Program Execution", etc.
+const EXPORT_URL = `${SERVER}/api/v2/assets/${UID}/export-settings/esMNwRKY6CJs6T8gaK9oxMJ/data.xlsx`;
+
 async function fetchAllPages() {
-  let results = [], url = `${SERVER}/api/v2/assets/${UID}/data/?format=json&lang=%3Aen-label&limit=100`;
-  while (url) {
-    const res = await fetch(PROXY + encodeURIComponent(url), {
-      headers: { 'Authorization': `Token ${TOKEN}`, 'x-requested-with': 'XMLHttpRequest' }
-    });
-    if (!res.ok) throw new Error(`API error ${res.status} — check token / asset UID`);
-    const data = await res.json();
-    results = results.concat(data.results || []);
-    url = data.next || null;
-  }
-  return results;
+  const res = await fetch(PROXY + encodeURIComponent(EXPORT_URL), {
+    headers: { 'Authorization': `Token ${TOKEN}`, 'x-requested-with': 'XMLHttpRequest' }
+  });
+  if (!res.ok) throw new Error(`Export error ${res.status} — check token`);
+
+  const buffer = await res.arrayBuffer();
+  const wb = XLSX.read(buffer, { type: 'array', cellDates: true });
+
+  // Find the main data sheet (same as Power Query: Item = "Karigar - Daily Reporting")
+  const sheetName = wb.SheetNames.find(s => s.toLowerCase().includes('karigar')) || wb.SheetNames[0];
+  if (!sheetName) throw new Error('No sheet found in export file');
+
+  const ws = wb.Sheets[sheetName];
+  const rows = XLSX.utils.sheet_to_json(ws, { defval: null });
+
+  // Normalise date column to YYYY-MM-DD string (SheetJS returns Date objects with cellDates:true)
+  rows.forEach(row => {
+    if (row['Date'] instanceof Date) {
+      // Convert to local date string to avoid UTC offset shifting the day
+      const d = row['Date'];
+      row['Date'] = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    }
+  });
+
+  return rows;
 }
 
 // ── Field detection ───────────────────────────────────────
@@ -495,7 +513,7 @@ function transformData() {
     // DurationColumns = List.Select(cols, each Text.StartsWith(_, "Approx. Duration"))
     // PairCount = List.Min({Count(act), Count(dur)})
     // → one row per non-blank activity, paired with its duration
-    // Collect KRA buckets for this record (used to filter activities later)
+    // ── Collect KRA buckets for this record ─────────────────────
     const recKRA = [];
     if (kraSubCols.length > 0) {
       kraSubCols.forEach(col => {
@@ -505,25 +523,40 @@ function transformData() {
       });
     } else {
       const combined = String(gv(rec, fieldMap.kra) || '').trim();
-      if (combined) combined.split(/\s+/).filter(Boolean).forEach(k => recKRA.push(k.toLowerCase()));
+      if (combined) combined.split(' ').filter(Boolean).forEach(k => recKRA.push(k.toLowerCase()));
     }
 
-    for (let i = 0; i < actCols.length; i++) {
-      const task = rec[actCols[i]];
-      if (!task || String(task).trim() === '' || String(task).toLowerCase() === 'false') continue;
+    // ── Activities (exact mirror of Power Query Activities table) ─
+    // ActivityColumns = List.Select(cols, each Text.StartsWith(_, "Activity/Task Done"))
+    // DurationColumns = List.Select(cols, each Text.StartsWith(_, "Approx. Duration"))
+    // PairCount = List.Min({Count(ActivityColumns), Count(DurationColumns)})
+    // → iterate 0..PairCount-1, skip blank activities, no 1440 cap (XLSX ReplaceValue already applied)
+    const pairCount = Math.min(actCols.length, durCols.length);
 
-      const rawMins = i < durCols.length ? rec[durCols[i]] : null;
-      let mins = parseFloat(rawMins);
-      if (isNaN(mins) || mins <= 0) mins = null;
-      else if (mins > 1440) mins = 1440;  // mirror: Power Query ReplaceValue(15120 → 1440)
+    for (let i = 0; i < pairCount; i++) {
+      // try Record.Field(r, ActivityColumns{i}) otherwise null
+      const task = rec[actCols[i]];
+
+      // FilteredBlankActivities: Activity/Task Done <> null AND Text.Trim(Text.From(...)) <> ""
+      if (task === null || task === undefined || String(task).trim() === '') continue;
+
+      // try Record.Field(r, DurationColumns{i}) otherwise null
+      const rawMins = rec[durCols[i]];
+
+      // CleanedDuration: try Number.From(_) otherwise try Number.FromText(Text.From(_)) otherwise null
+      let mins = (rawMins !== null && rawMins !== undefined) ? parseFloat(rawMins) : null;
+      if (isNaN(mins)) mins = null;
+
+      // AddedDurationHours: Duration Hours = Approx. Duration (mins) / 60
+      const hours = (mins !== null && mins > 0) ? mins / 60 : null;
 
       activitiesTable.push({
         ...base,
         actNo: i + 1,
         task:  String(task).trim(),
         mins,
-        hours: mins !== null ? mins / 60 : null,
-        kra:   recKRA,   // store record's KRA buckets for filtering
+        hours,
+        kra: recKRA,
       });
     }
 
@@ -673,8 +706,8 @@ function renderKPIs(records, activities, kra) {
   // KRA Activities = COUNTROWS(KRA) — total unpivoted KRA rows
   set('k4', kra.length || '—');
 
-  // Reported Hours = SUM(Activities[Duration > 0]) / 60
-  const totalM = activities.reduce((s, a) => s + (a.mins || 0), 0);
+  // Reported Hours = DIVIDE(SUM(Activities[Duration > 0]), 60)  — mirrors DAX Reported Minutes
+  const totalM = activities.reduce((s, a) => s + (a.mins !== null && a.mins > 0 ? a.mins : 0), 0);
   set('k5', totalM > 0 ? fmtHrs(totalM) : '—');
 }
 
