@@ -1003,9 +1003,11 @@ async function fetchData() {
     const [schema, data] = await Promise.all([fetchSchema(), fetchAllPages()]);
     rawData = data;
 
-    // Build allKeys from all records
+    // Build allKeys from ALL records so group-level columns are never missed
+    // (KoboToolbox omits null fields per-record, so scanning only 30 records
+    //  can miss columns that only appear when a KRA group is actually filled in)
     const ks = new Set();
-    rawData.slice(0, 30).forEach(r => Object.keys(r).forEach(k => ks.add(k)));
+    rawData.forEach(r => Object.keys(r).forEach(k => ks.add(k)));
     allKeys = [...ks];
 
     // 1. Detect field names (using schema label→name map for accuracy)
