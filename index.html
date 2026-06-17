@@ -287,7 +287,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
       <div class="tw">
         <table class="dt">
           <thead><tr>
-            <th>Date</th><th>Working</th><th>Activity / Task Done</th><th>Hours</th>
+            <th>Date</th><th>Working</th><th>Activity / Task Done</th><th style="text-align:right">Hours</th>
           </tr></thead>
           <tbody id="tAct"></tbody>
         </table>
@@ -371,14 +371,10 @@ function fmtDate(v){
   const M=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   return`${parseInt(dy)} ${M[parseInt(mo)-1]} ${yr}`;
 }
-// fmtHrs: convert minutes → clean hours string e.g. 90→"1.5 h", 60→"1 h", 100→"1.67 h"
+// fmtHrs: convert minutes → hours, always 2 decimal places, no suffix (matches Power BI "3.00")
 function fmtHrs(mins){
   if(mins==null||isNaN(mins))return'—';
-  const h=mins/60;
-  // Round to 2 decimal places, then drop unnecessary trailing zeros
-  const rounded=Math.round(h*100)/100;
-  const str=rounded%1===0?String(rounded):rounded.toFixed(2).replace(/\.?0+$/,'');
-  return str+' h';
+  return(mins/60).toFixed(2);
 }
 function wtColor(wt){
   const n=(wt||'').toLowerCase().replace(/\s+/g,'');
@@ -689,31 +685,38 @@ function renderTables(d){
     </tr>`;
   }).join(''):`<tr><td colspan="5" class="empty">No data</td></tr>`;
 
-  // Activities Done — one row per activity (expanded, like Activities table in Power BI)
-  // Columns: Date, Working, Activity/Task Done, Hours  (= Duration ÷ 60)
+  // Activities Done — one row per activity (expanded), with Total row at bottom
   const ab=document.getElementById('tAct');
   const actRows=[];
+  let totalMinsAct=0;
   sorted.forEach(r=>{
     const dt=fmtDate(gv(r,fieldMap.date));
     const wt=String(gv(r,fieldMap.workType)||'—');
     const acts=getActivities(r);
-    if(acts.length){
-      acts.forEach(a=>{
-        // Hours = Duration (mins) ÷ 60, matching DAX Reported Hours
-        const hrs=a.mins!==null?fmtHrs(a.mins):'—';
-        actRows.push(
-          `<tr>
-            <td style="white-space:nowrap">${esc(dt)}</td>
-            <td>${wtBadge(wt)}</td>
-            <td style="max-width:260px">${esc(a.task)}</td>
-            <td style="white-space:nowrap;color:var(--muted)">${esc(hrs)}</td>
-          </tr>`
-        );
-      });
-    }
+    acts.forEach(a=>{
+      const hrs=a.mins!==null?fmtHrs(a.mins):'—';
+      if(a.mins!==null)totalMinsAct+=a.mins;
+      actRows.push(
+        `<tr>
+          <td style="white-space:nowrap">${esc(dt)}</td>
+          <td>${wtBadge(wt)}</td>
+          <td>${esc(a.task)}</td>
+          <td style="white-space:nowrap;text-align:right">${esc(hrs)}</td>
+        </tr>`
+      );
+    });
   });
+  // Total row — matches Power BI total at bottom of Activities Done table
+  const totalRow=actRows.length
+    ? `<tr style="font-weight:700;border-top:2px solid var(--b2)">
+        <td colspan="3" style="padding:8px 12px">Total</td>
+        <td style="text-align:right;padding:8px 12px">${(totalMinsAct/60).toFixed(2)}</td>
+       </tr>`
+    : '';
   set('actCnt',actRows.length+' activities');
-  ab.innerHTML=actRows.length?actRows.join(''):`<tr><td colspan="4" class="empty">No activities found — check ⚙ Field Config</td></tr>`;
+  ab.innerHTML=actRows.length
+    ? actRows.join('')+totalRow
+    : `<tr><td colspan="4" class="empty">No activities found — check ⚙ Field Config</td></tr>`;
 }
 
 // ── Excel download — 4 sheets matching Power BI tables ────
@@ -763,7 +766,7 @@ function doDownload(){
           'Date':dt,'Select Lab':lab,'Staff Name':currentUser,'Working Type':wt,
           'Activity/Task Done':a.task,
           'Approx. Duration (mins)':a.mins??'',
-          'Hours':a.mins!=null?fmtHrs(a.mins):'',
+          'Hours':a.mins!=null?parseFloat(fmtHrs(a.mins)):'',
         });
       });
     });
