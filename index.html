@@ -9,143 +9,139 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#F1F5F9;--card:#fff;--border:#E2E8F0;--border2:#CBD5E1;
+  --bg:#F1F5F9;--card:#fff;--b:#E2E8F0;--b2:#CBD5E1;
   --text:#0F172A;--muted:#475569;--faint:#94A3B8;
-  --ink:#1E293B;
-  --h:#0F172A;--sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
-  --mono:'Consolas','Cascadia Code',monospace;--r:12px;
-  --sh:0 1px 2px rgba(0,0,0,.05),0 1px 4px rgba(0,0,0,.04);
+  --h:#0F172A;
+  --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  --mono:'Consolas','Cascadia Code',monospace;
+  --r:12px;--sh:0 1px 2px rgba(0,0,0,.05),0 1px 4px rgba(0,0,0,.04);
 }
 body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.5}
 
-/* topbar */
-.nav{background:var(--h);padding:0 24px;height:58px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:30;box-shadow:0 1px 0 rgba(255,255,255,.06),0 4px 16px rgba(0,0,0,.25)}
-.nav-l{display:flex;align-items:center;gap:12px}
-.nav-icon{width:34px;height:34px;background:rgba(255,255,255,.1);border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.nav-title{font-size:15px;font-weight:700;color:#fff;letter-spacing:-.2px}
-.nav-sub{font-size:11px;color:rgba(255,255,255,.4);margin-top:1px}
+/* nav */
+.nav{background:var(--h);padding:0 22px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:30;box-shadow:0 2px 16px rgba(0,0,0,.28)}
+.nav-l{display:flex;align-items:center;gap:11px}
+.nav-ic{width:32px;height:32px;background:rgba(255,255,255,.1);border-radius:8px;display:flex;align-items:center;justify-content:center}
+.nav-t{font-size:14px;font-weight:700;color:#fff;letter-spacing:-.2px}
+.nav-s{font-size:11px;color:rgba(255,255,255,.4);margin-top:1px}
 .nav-r{display:flex;align-items:center;gap:8px}
-.chip{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.15);color:#fff;padding:5px 13px;border-radius:20px;font-size:13px;font-weight:600;display:none}
-.pill{display:none;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:12px;font-family:var(--mono);background:rgba(255,255,255,.1);color:rgba(255,255,255,.7);border:1px solid rgba(255,255,255,.15)}
+.chip{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.15);color:#fff;padding:5px 12px;border-radius:20px;font-size:12px;font-weight:600;display:none}
+.pill{display:none;align-items:center;gap:5px;padding:4px 9px;border-radius:20px;font-size:11px;font-family:var(--mono);background:rgba(255,255,255,.1);color:rgba(255,255,255,.7);border:1px solid rgba(255,255,255,.12)}
 .pill.on{display:inline-flex}
-.dot{width:6px;height:6px;border-radius:50%;background:currentColor;display:inline-block}
-.dot.spin{animation:spin .9s linear infinite}
-.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--sans);transition:all .12s;white-space:nowrap}
-.btn svg{width:14px;height:14px;flex-shrink:0}
+.dot{width:5px;height:5px;border-radius:50%;background:currentColor;display:inline-block}
+.dot.sp{animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:7px 13px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--sans);transition:all .12s;white-space:nowrap}
+.btn svg{width:13px;height:13px;flex-shrink:0}
 .btn:active{transform:scale(.97)}
-.btn-nav{background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.18)}
+.btn-nav{background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.15)}
 .btn-nav:hover{background:rgba(255,255,255,.2)}
 .btn-teal{background:#0D9488;color:#fff;border:1px solid #0D9488}
 .btn-teal:hover{background:#0a7a71}
-.btn-out{background:var(--card);color:var(--text);border:1px solid var(--border2)}
-.btn-out:hover{border-color:#94A3B8;color:var(--ink)}
+.btn-out{background:var(--card);color:var(--text);border:1px solid var(--b2)}
+.btn-out:hover{border-color:#94A3B8}
 
 /* page */
-.page{max-width:1120px;margin:0 auto;padding:20px 18px 80px}
+.page{max-width:1120px;margin:0 auto;padding:18px 16px 60px}
 
 /* login */
-#loginWrap{display:none;min-height:calc(100vh - 58px);align-items:center;justify-content:center;padding:40px 16px}
-.lcard{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:44px 40px;width:400px;max-width:100%;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.1)}
-.lico{width:68px;height:68px;background:var(--h);border-radius:16px;display:flex;align-items:center;justify-content:center;margin:0 auto 18px;box-shadow:0 4px 16px rgba(15,23,42,.3)}
-.lcard h1{font-size:22px;font-weight:700;color:var(--text);margin-bottom:4px}
-.lcard p{color:var(--muted);font-size:13px;margin-bottom:28px;line-height:1.6}
-.fg{text-align:left;margin-bottom:14px}
-.fg label{display:block;font-size:11px;font-weight:700;color:var(--faint);text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px}
-.fg select{width:100%;padding:11px 13px;border:1.5px solid var(--border2);border-radius:9px;font-size:14px;color:var(--text);background:var(--card);outline:none;transition:border .2s;font-family:var(--sans)}
+#loginWrap{display:none;min-height:calc(100vh - 56px);align-items:center;justify-content:center;padding:40px 16px}
+.lcard{background:var(--card);border:1px solid var(--b);border-radius:16px;padding:40px 36px;width:380px;max-width:100%;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.1)}
+.lico{width:64px;height:64px;background:var(--h);border-radius:14px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px}
+.lcard h1{font-size:20px;font-weight:700;margin-bottom:4px}
+.lcard p{color:var(--muted);font-size:13px;margin-bottom:26px;line-height:1.6}
+.fg{text-align:left;margin-bottom:12px}
+.fg label{display:block;font-size:10px;font-weight:700;color:var(--faint);text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px}
+.fg select{width:100%;padding:10px 12px;border:1.5px solid var(--b2);border-radius:8px;font-size:14px;color:var(--text);background:var(--card);outline:none;font-family:var(--sans);transition:border .15s}
 .fg select:focus{border-color:var(--h)}
-.btn-login{width:100%;padding:13px;background:var(--h);color:#fff;border:none;border-radius:9px;font-size:15px;font-weight:700;cursor:pointer;font-family:var(--sans);transition:background .2s;margin-top:4px}
+.btn-login{width:100%;padding:12px;background:var(--h);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--sans);margin-top:4px}
 .btn-login:hover{background:#1e3a5f}
 .btn-login:disabled{background:#94A3B8;cursor:not-allowed}
-.lerr{margin-top:10px;padding:10px 13px;background:#fff5f5;border:1px solid #fecaca;border-radius:8px;color:#c0392b;font-size:12px;text-align:left;display:none}
-.lnote{font-size:11px;color:var(--faint);margin-top:14px}
+.lerr{margin-top:9px;padding:9px 12px;background:#fff5f5;border:1px solid #fecaca;border-radius:7px;color:#c0392b;font-size:12px;text-align:left;display:none}
+.lnote{font-size:11px;color:var(--faint);margin-top:12px}
 
 /* dashboard */
 #dash{display:none}
-.banner{padding:11px 15px;border-radius:9px;font-size:13px;margin-bottom:14px;border:1px solid}
+.banner{padding:10px 14px;border-radius:8px;font-size:12px;margin-bottom:12px;border:1px solid}
 .banner-err{background:#fff5f5;color:#c0392b;border-color:#fecaca}
-.banner-ok{background:#f0fdf4;color:#166534;border-color:#bbf7d0}
 
 /* filter bar */
-.fbar{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:12px 16px;margin-bottom:18px;display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;box-shadow:var(--sh)}
+.fbar{background:var(--card);border:1px solid var(--b);border-radius:var(--r);padding:11px 15px;margin-bottom:16px;display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;box-shadow:var(--sh)}
 .fbar-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);display:flex;align-items:center;gap:5px;padding-bottom:2px;white-space:nowrap}
 .ffields{display:flex;gap:10px;flex:1;flex-wrap:wrap}
-.ffields .fg{flex:1;min-width:120px;margin:0}
-.ffields .fg select,.ffields .fg input[type=date]{padding:8px 11px;font-size:12px;border-radius:8px;border:1px solid var(--border2);background:var(--bg);color:var(--text);outline:none;width:100%;font-family:var(--sans);transition:border .15s}
+.ffields .fg{flex:1;min-width:110px;margin:0}
+.ffields .fg select,.ffields .fg input[type=date]{padding:7px 10px;font-size:12px;border-radius:7px;border:1px solid var(--b2);background:var(--bg);color:var(--text);outline:none;width:100%;font-family:var(--sans);transition:border .12s}
 .ffields .fg select:focus,.ffields .fg input[type=date]:focus{border-color:var(--h)}
 
-/* section head */
-.sh{display:flex;align-items:center;justify-content:space-between;margin-bottom:11px;flex-wrap:wrap;gap:8px}
-.sh h2{font-size:10px;font-weight:700;color:var(--faint);text-transform:uppercase;letter-spacing:.1em}
+/* section label */
+.slbl{font-size:10px;font-weight:700;color:var(--faint);text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px;margin-top:2px}
 
-/* KPI grid */
-.kpig{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:20px}
-.kc{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:16px 14px;border-top:3px solid var(--border);box-shadow:var(--sh);transition:transform .15s,box-shadow .15s}
-.kc:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.08)}
-.klab{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--faint);margin-bottom:9px}
-.kval{font-size:30px;font-weight:800;color:var(--text);line-height:1;letter-spacing:-1px}
-.ksub{font-size:10px;color:var(--faint);margin-top:5px}
+/* KPI grid — 6 cols */
+.kpig{display:grid;grid-template-columns:repeat(6,1fr);gap:11px;margin-bottom:16px}
+.kc{background:var(--card);border:1px solid var(--b);border-radius:var(--r);padding:15px 13px;border-top:3px solid var(--b);box-shadow:var(--sh);transition:transform .15s,box-shadow .15s}
+.kc:hover{transform:translateY(-2px);box-shadow:0 4px 10px rgba(0,0,0,.08)}
+.klab{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--faint);margin-bottom:8px}
+.kval{font-size:28px;font-weight:800;color:var(--text);line-height:1;letter-spacing:-1px}
+.ksub{font-size:10px;color:var(--faint);margin-top:4px}
 
-/* charts */
-.cr{display:grid;grid-template-columns:5fr 7fr;gap:14px;margin-bottom:18px}
-.cc{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:20px;box-shadow:var(--sh)}
-.cc-head{font-size:12px;font-weight:700;color:var(--ink);margin-bottom:14px;display:flex;align-items:center;gap:7px}
-.cw{position:relative;height:210px}
+/* charts row */
+.cr{display:grid;grid-template-columns:4fr 6fr;gap:13px;margin-bottom:16px}
+.cc{background:var(--card);border:1px solid var(--b);border-radius:var(--r);padding:18px;box-shadow:var(--sh)}
+.cc-h{font-size:12px;font-weight:700;color:var(--text);margin-bottom:13px;display:flex;align-items:center;gap:6px}
+.cw{position:relative}
 
-/* tables */
-.tr2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px}
-.tc{background:var(--card);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;box-shadow:var(--sh)}
-.tc-head{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
-.tc-title{font-size:12px;font-weight:700;color:var(--ink);display:flex;align-items:center;gap:6px}
-.tc-count{font-size:11px;color:var(--faint);font-family:var(--mono)}
-.tw{overflow:auto;max-height:280px}
+/* tables row */
+.tr2{display:grid;grid-template-columns:1fr 1fr;gap:13px;margin-bottom:16px}
+.tc{background:var(--card);border:1px solid var(--b);border-radius:var(--r);overflow:hidden;box-shadow:var(--sh)}
+.tch{padding:12px 15px;border-bottom:1px solid var(--b);display:flex;align-items:center;justify-content:space-between;gap:8px}
+.tct{font-size:12px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:5px}
+.tcc{font-size:10px;color:var(--faint);font-family:var(--mono)}
+.tw{overflow:auto;max-height:290px}
 .dt{width:100%;border-collapse:collapse;font-size:12px}
-.dt th{text-align:left;padding:8px 13px;background:#F8FAFC;color:var(--faint);font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;position:sticky;top:0;z-index:1;border-bottom:1px solid var(--border)}
-.dt td{padding:9px 13px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:top}
+.dt th{text-align:left;padding:7px 12px;background:#F8FAFC;color:var(--faint);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;position:sticky;top:0;z-index:1;border-bottom:1px solid var(--b)}
+.dt td{padding:8px 12px;border-bottom:1px solid var(--b);color:var(--text);vertical-align:top}
 .dt tr:last-child td{border-bottom:none}
 .dt tr:hover td{background:#FAFBFC}
-.empty{text-align:center;color:var(--faint);padding:28px;font-size:12px}
+.empty{text-align:center;color:var(--faint);padding:24px;font-size:12px}
 
 /* badges */
-.badge{display:inline-block;padding:2px 8px;border-radius:5px;font-size:10.5px;font-weight:700}
-.tag{display:inline-block;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:600;margin:1px 2px 1px 0;white-space:nowrap}
+.badge{display:inline-block;padding:1px 7px;border-radius:4px;font-size:10px;font-weight:700}
 
-/* config */
-.cfgp{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:14px 18px;margin-bottom:18px;box-shadow:var(--sh)}
-.cfgb{display:none;margin-top:12px}
+/* cfg */
+.cfgp{background:var(--card);border:1px solid var(--b);border-radius:var(--r);padding:12px 16px;margin-bottom:16px;box-shadow:var(--sh)}
+.cfgb{display:none;margin-top:10px}
 .cfgb.open{display:block}
-.cfgb code{display:block;background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:8px 11px;font-size:10.5px;font-family:var(--mono);word-break:break-all;max-height:72px;overflow-y:auto;margin:6px 0 12px}
-.cfgg{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
-.cfgf label{font-size:10px;font-weight:700;color:var(--faint);display:block;margin-bottom:4px}
-.cfgf select{width:100%;padding:6px 9px;border:1px solid var(--border2);border-radius:7px;font-size:11.5px;background:var(--bg);outline:none;font-family:var(--sans)}
+.cfgb code{display:block;background:var(--bg);border:1px solid var(--b);border-radius:6px;padding:7px 10px;font-size:10px;font-family:var(--mono);word-break:break-all;max-height:64px;overflow-y:auto;margin:6px 0 12px}
+.cfgg{display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:9px}
+.cfgf label{font-size:9.5px;font-weight:700;color:var(--faint);display:block;margin-bottom:3px}
+.cfgf select{width:100%;padding:5px 8px;border:1px solid var(--b2);border-radius:6px;font-size:11px;background:var(--bg);outline:none;font-family:var(--sans)}
 
 /* loading */
 .ctr{text-align:center;padding:60px 20px;color:var(--muted)}
-.spin-ring{width:28px;height:28px;border:2.5px solid var(--border);border-top-color:var(--h);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 14px}
-@keyframes spin{to{transform:rotate(360deg)}}
-
-.footer{text-align:center;font-size:11px;color:var(--faint);padding:14px;border-top:1px solid var(--border);margin-top:4px}
+.spin-ring{width:26px;height:26px;border:2.5px solid var(--b);border-top-color:var(--h);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 12px}
+.footer{text-align:center;font-size:10.5px;color:var(--faint);padding:14px;border-top:1px solid var(--b);margin-top:4px}
 
 /* responsive */
 @media(max-width:960px){.kpig{grid-template-columns:repeat(3,1fr)}.cr{grid-template-columns:1fr}}
-@media(max-width:700px){.tr2{grid-template-columns:1fr}.kpig{grid-template-columns:repeat(2,1fr)}.ffields{flex-direction:column}}
+@media(max-width:680px){.tr2{grid-template-columns:1fr}.kpig{grid-template-columns:repeat(2,1fr)}.ffields{flex-direction:column}}
 </style>
 </head>
 <body>
 
 <nav class="nav">
   <div class="nav-l">
-    <div class="nav-icon">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.85)" stroke-width="2.2" stroke-linecap="round"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z"/></svg>
+    <div class="nav-ic">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.8)" stroke-width="2.2" stroke-linecap="round"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z"/></svg>
     </div>
     <div>
-      <div class="nav-title">Daily Report</div>
-      <div class="nav-sub" id="navSub">Karigar</div>
+      <div class="nav-t">Karigar Daily Reporting</div>
+      <div class="nav-s" id="navSub">Personal Dashboard</div>
     </div>
   </div>
   <div class="nav-r">
-    <span class="pill" id="pill"><span class="dot spin"></span><span id="pillTxt">loading</span></span>
+    <span class="pill" id="pill"><span class="dot sp"></span><span id="pillTxt">loading</span></span>
     <span class="chip" id="userChip"></span>
-    <button class="btn btn-nav" id="logoutBtn" onclick="doLogout()" style="display:none">
+    <button class="btn btn-nav" id="logoutBtn" style="display:none" onclick="doLogout()">
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 2H3a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3M11 11l3-3-3-3M14 8H6"/></svg>
       Logout
     </button>
@@ -156,24 +152,24 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
   </div>
 </nav>
 
-<div id="bannerArea"></div>
+<div id="bannerArea" style="max-width:1120px;margin:0 auto;padding:0 16px"></div>
 <div id="loadArea"></div>
 
 <!-- Login -->
 <div id="loginWrap">
   <div class="lcard">
     <div class="lico">
-      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
     </div>
     <h1>Daily Report</h1>
-    <p>Select your name to view your personal data</p>
+    <p>Select your name to view your personal dashboard</p>
     <div class="fg">
       <label>Your Name</label>
       <select id="nameSelect"><option value="">— Select name —</option></select>
     </div>
     <button class="btn-login" id="loginBtn" onclick="doLogin()" disabled>View My Dashboard →</button>
     <div class="lerr" id="lerr"></div>
-    <p class="lnote">You will only see your own submissions</p>
+    <p class="lnote">You will see only your own submissions</p>
   </div>
 </div>
 
@@ -184,121 +180,170 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
   <!-- Filter bar -->
   <div class="fbar">
     <div class="fbar-lbl">
-      <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M2 4h12M4 8h8M6 12h4"/></svg>
+      <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M2 4h12M4 8h8M6 12h4"/></svg>
       Filter
     </div>
     <div class="ffields">
       <div class="fg"><label>From</label><input type="date" id="dfrom" onchange="applyFilters()"></div>
       <div class="fg"><label>To</label><input type="date" id="dto" onchange="applyFilters()"></div>
-      <div class="fg"><label>Work Type</label><select id="wtf" onchange="applyFilters()"><option value="">All Types</option></select></div>
+      <div class="fg"><label>Working Type</label><select id="wtf" onchange="applyFilters()"><option value="">All Types</option></select></div>
     </div>
-    <button class="btn btn-out" onclick="resetFilters()" style="padding:7px 12px;font-size:12px">Reset</button>
+    <button class="btn btn-out" style="font-size:12px;padding:6px 11px" onclick="resetFilters()">Reset</button>
   </div>
 
-  <!-- KPIs -->
-  <div class="sh"><h2>Overview</h2></div>
-  <div class="kpig" id="kpig">
-    <div class="kc" style="border-top-color:#4F46E5"><div class="klab">Total Days</div><div class="kval" id="k0">—</div><div class="ksub" id="k0s"></div></div>
-    <div class="kc" style="border-top-color:#0EA5E9"><div class="klab">Lab / Field</div><div class="kval" id="k1">—</div><div class="ksub">work days</div></div>
-    <div class="kc" style="border-top-color:#0D9488"><div class="klab">Sessions</div><div class="kval" id="k2">—</div><div class="ksub">conducted</div></div>
-    <div class="kc" style="border-top-color:#16A34A"><div class="klab">Courses</div><div class="kval" id="k3">—</div><div class="ksub">covered</div></div>
-    <div class="kc" style="border-top-color:#D97706"><div class="klab">KRA Entries</div><div class="kval" id="k4">—</div><div class="ksub">bucket entries</div></div>
-    <div class="kc" style="border-top-color:#7C3AED"><div class="klab">Total Hours</div><div class="kval" id="k5">—</div><div class="ksub">from activities</div></div>
+  <!-- KPI Cards — matching Power BI labels exactly -->
+  <div class="slbl">Overview</div>
+  <div class="kpig">
+    <div class="kc" style="border-top-color:#4F46E5">
+      <div class="klab">Total Submissions</div>
+      <div class="kval" id="k0">—</div>
+      <div class="ksub" id="k0s"></div>
+    </div>
+    <div class="kc" style="border-top-color:#0EA5E9">
+      <div class="klab">Lab/Field Reports</div>
+      <div class="kval" id="k1">—</div>
+      <div class="ksub">Working Type: Lab or Field</div>
+    </div>
+    <div class="kc" style="border-top-color:#0D9488">
+      <div class="klab">Total Sessions</div>
+      <div class="kval" id="k2">—</div>
+      <div class="ksub">SUM of No. of Sessions</div>
+    </div>
+    <div class="kc" style="border-top-color:#16A34A">
+      <div class="klab">Count of Course(s)</div>
+      <div class="kval" id="k3">—</div>
+      <div class="ksub">Non-blank Course entries</div>
+    </div>
+    <div class="kc" style="border-top-color:#D97706">
+      <div class="klab">KRA Activities</div>
+      <div class="kval" id="k4">—</div>
+      <div class="ksub">Unpivoted KRA rows</div>
+    </div>
+    <div class="kc" style="border-top-color:#7C3AED">
+      <div class="klab">Reported Hours</div>
+      <div class="kval" id="k5">—</div>
+      <div class="ksub">SUM(Duration) ÷ 60</div>
+    </div>
   </div>
 
   <!-- Charts -->
-  <div class="sh"><h2>Breakdown</h2></div>
+  <div class="slbl">Breakdown</div>
   <div class="cr">
+    <!-- Pie -->
     <div class="cc">
-      <div class="cc-head">
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="8" cy="8" r="6"/><path d="M8 2a6 6 0 0 1 6 6H8z"/></svg>
-        Work Type
+      <div class="cc-h">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="8" cy="8" r="6"/><path d="M8 2a6 6 0 0 1 6 6H8z"/></svg>
+        Total Submissions by Working Type
       </div>
-      <div class="cw"><canvas id="pieC"></canvas></div>
+      <div class="cw" style="height:200px"><canvas id="pieC"></canvas></div>
     </div>
+    <!-- Horizontal bar: KRA -->
     <div class="cc">
-      <div class="cc-head">
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M2 12h2V7H2zM6 12h2V4H6zM10 12h2V9h-2zM14 12h-2V2h2"/></svg>
+      <div class="cc-h">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M2 4h6M2 8h10M2 12h4"/></svg>
         KRA Distribution
       </div>
-      <div class="cw"><canvas id="barC"></canvas></div>
+      <div class="cw" id="kraWrap"><canvas id="barC"></canvas></div>
     </div>
   </div>
 
   <!-- Tables -->
-  <div class="sh">
-    <h2>Submission Detail</h2>
-    <button class="btn btn-out" onclick="doDownload()" style="font-size:12px;padding:6px 12px">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px">
+    <div class="slbl" style="margin:0">Submission Detail</div>
+    <button class="btn btn-out" onclick="doDownload()" style="font-size:12px;padding:6px 11px">
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2v8M5 7l3 3 3-3M3 13h10"/></svg>
       Download Excel
     </button>
   </div>
   <div class="tr2">
+    <!-- Sessions & Courses -->
     <div class="tc">
-      <div class="tc-head">
-        <span class="tc-title">
-          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="2" y="3" width="12" height="11" rx="1.5"/><path d="M5 3V2M11 3V2M2 7h12"/></svg>
+      <div class="tch">
+        <span class="tct">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="2" y="3" width="12" height="11" rx="1.5"/><path d="M5 3V2M11 3V2M2 7h12"/></svg>
           Sessions &amp; Courses
         </span>
-        <span class="tc-count" id="scCount"></span>
+        <span class="tcc" id="scCnt"></span>
       </div>
-      <div class="tw"><table class="dt"><thead><tr><th>Date</th><th>Lab</th><th>Type</th><th>Sessions</th><th>Courses</th></tr></thead><tbody id="tSC"></tbody></table></div>
+      <div class="tw">
+        <table class="dt">
+          <thead><tr>
+            <th>Date</th><th>Lab</th><th>Working Type</th><th>Sessions</th><th>Course(s)</th>
+          </tr></thead>
+          <tbody id="tSC"></tbody>
+        </table>
+      </div>
     </div>
+    <!-- Activities Done -->
     <div class="tc">
-      <div class="tc-head">
-        <span class="tc-title">
-          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M13 2H3a1 1 0 0 0-1 1v11l3-2 2 2 2-2 2 2 3-2V3a1 1 0 0 0-1-1z"/></svg>
+      <div class="tch">
+        <span class="tct">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M13 2H3a1 1 0 0 0-1 1v11l3-2 2 2 2-2 2 2 3-2V3a1 1 0 0 0-1-1z"/></svg>
           Activities Done
         </span>
-        <span class="tc-count" id="actCount"></span>
+        <span class="tcc" id="actCnt"></span>
       </div>
-      <div class="tw"><table class="dt"><thead><tr><th>Date</th><th>Activity / Task Done</th><th>Duration</th></tr></thead><tbody id="tAct"></tbody></table></div>
+      <div class="tw">
+        <table class="dt">
+          <thead><tr>
+            <th>Date</th><th>Working</th><th>Activity / Task Done</th><th>Hours</th>
+          </tr></thead>
+          <tbody id="tAct"></tbody>
+        </table>
+      </div>
     </div>
   </div>
 
   <!-- Field config -->
   <div class="cfgp">
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-      <span style="font-size:12px;color:var(--muted)">Charts or numbers incorrect? Map field names manually.</span>
-      <button class="btn btn-out" style="font-size:11px;padding:5px 11px" onclick="document.getElementById('cfgB').classList.toggle('open')">⚙ Field Config</button>
+      <span style="font-size:12px;color:var(--muted)">Numbers look wrong? Map field names manually.</span>
+      <button class="btn btn-out" style="font-size:11px;padding:5px 10px" onclick="document.getElementById('cfgB').classList.toggle('open')">⚙ Field Config</button>
     </div>
     <div class="cfgb" id="cfgB">
-      <p style="font-size:11px;color:var(--muted);margin-top:10px">Available fields:</p>
+      <p style="font-size:11px;color:var(--muted);margin-top:8px">Detected fields from API:</p>
       <code id="cfgFields">—</code>
       <div class="cfgg" id="cfgGrid"></div>
-      <button class="btn btn-teal" style="margin-top:12px;font-size:12px" onclick="saveCfg()">✓ Apply</button>
+      <button class="btn btn-teal" style="margin-top:10px;font-size:12px" onclick="saveCfg()">✓ Apply</button>
     </div>
   </div>
 
-  <div class="footer">Karigar Daily Report · KoboToolbox EU · Personal data only</div>
+  <div class="footer">Karigar Daily Reporting · KoboToolbox EU · Showing your data only</div>
 </div>
 </div>
 
 <script>
-// ── Config (same pattern as Karigar Batch Tracker) ────────
+// ── identical fetch pattern to Karigar Batch Tracker ──────
 const PROXY  = 'https://corsproxy.io/?';
 const SERVER = 'https://eu.kobotoolbox.org';
 const TOKEN  = 'be8d9189ac085ed0345b12ee0ae622d4e93b3ba0';
 const UID    = 'aJeu3J4hsaeFAETZpKuXzV';
 
-// ── KRA label map (from Power Query column names) ─────────
+// ── KRA label map — from Power Query column names ─────────
+// key = internal KoboToolbox choice name, value = label
 const KRA_LABELS = {
-  session_program_execution:'Session & Program Execution',
-  lab_operations_management:'Lab Operations & Management',
-  resource_inventory_management:'Resource & Inventory Management',
-  budget_accounts:'Budget & Accounts',
-  supervisory_operational_support:'Supervisory Support',
-  content_development_learning_design:'Content Development',
-  stakeholder_engagement:'Stakeholder Engagement',
-  team_coordination:'Team Coordination',
-  cross_project_support:'Cross Project Support',
-  product_sale_in_house_services:'Product Sale & Services',
-  student_innovation_support:'Student Innovation',
-  proposal_curriculum_nsqf:'Proposal/NSQF',
-  others:'Others'
+  session_program_execution:      'Session & Program Execution',
+  lab_operations_management:      'Lab Operations & Management',
+  resource_inventory_management:  'Resource & Inventory Management',
+  budget_accounts:                'Budget & Accounts',
+  supervisory_operational_support:'Supervisory & Operational Support',
+  content_development_learning_design:'Content Development & Learning Design',
+  stakeholder_engagement:         'Stakeholder Engagement',
+  team_coordination:              'Team Coordination',
+  cross_project_support:          'Cross Project Support',
+  product_sale_in_house_services: 'Product Sale & In-House Services',
+  student_innovation_support:     'Student Innovation Support',
+  proposal_curriculum_nsqf:       'Proposal/Curriculum/NSQF',
+  others:                         'Others'
 };
 
-// ── Field detection candidates (exact Power Query names first) ─
+// Work type colours (matching Power BI pie)
+const WT_COLS = {
+  lab:'#4F46E5',field:'#16A34A',travel:'#D97706',
+  compoff:'#7C3AED','comp off':'#7C3AED',leave:'#EF4444',other:'#94A3B8'
+};
+
+// ── Field detection candidates (exact Power Query labels first) ─
 const CANDS = {
   name:     ['Staff Name','staff_name','your_name','name','_submitted_by'],
   date:     ['Date','date','today','_submission_time'],
@@ -306,41 +351,40 @@ const CANDS = {
   workType: ['Working Type','working_type','work_type','type_of_work'],
   sessions: ['Number of Sessions','number_of_sessions','sessions','no_sessions'],
   courses:  ['Course(s)','courses','course'],
-  kra:      ['Select KRA Bucket(s)','kra','kra_buckets','select_kra'],
+  kra:      ['Select KRA Bucket(s)','select_kra_bucket_s_','kra','kra_buckets'],
 };
-
-const WT_COLS = {lab:'#4F46E5',field:'#16A34A',travel:'#D97706',compoff:'#7C3AED',leave:'#EF4444',other:'#94A3B8'};
-const BAR_PAL = ['#4F46E5','#0D9488','#16A34A','#D97706','#E11D48','#7C3AED','#0EA5E9','#F97316','#84CC16','#EC4899','#3B82F6','#F59E0B','#10B981'];
 
 // ── State ─────────────────────────────────────────────────
 let allData=[],allKeys=[],fieldMap={},userMap={},actCols=[],durCols=[];
 let currentUser=null,userData=[],CHS={};
 
 // ── Helpers ───────────────────────────────────────────────
-function gv(r,f){return f?(r[f]??''):''}
+function gv(r,f){return(f&&r)?((r[f]!==undefined&&r[f]!==null)?r[f]:''):''}
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
 function set(id,v){const e=document.getElementById(id);if(e)e.textContent=v}
-function fmtDate(v){
-  if(!v)return'—';
-  const m=String(v).match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if(!m)return String(v).slice(0,10);
-  const M=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  return`${parseInt(m[3])} ${M[parseInt(m[2])-1]} ${m[1]}`;
-}
-function numSum(data,field){
-  if(!field)return null;
-  let t=0,f=false;
-  data.forEach(r=>{const v=parseFloat(r[field]);if(!isNaN(v)&&v>0){t+=v;f=true;}});
-  return f?t:null;
-}
 function parseD(v){if(!v)return'';const m=String(v).match(/^(\d{4}-\d{2}-\d{2})/);return m?m[1]:'';}
+function fmtDate(v){
+  const d=parseD(v);if(!d)return String(v||'—').slice(0,10);
+  const[yr,mo,dy]=d.split('-');
+  const M=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return`${parseInt(dy)} ${M[parseInt(mo)-1]} ${yr}`;
+}
+function wtColor(wt){
+  const n=(wt||'').toLowerCase().replace(/\s+/g,'');
+  for(const[k,v]of Object.entries(WT_COLS))if(n.includes(k.replace(/\s/g,'')))return v;
+  return WT_COLS.other;
+}
+function wtBadge(wt){
+  const c=wtColor(wt);
+  return`<span class="badge" style="background:${c}18;color:${c};border:1px solid ${c}30">${esc(wt||'—')}</span>`;
+}
 
-// ── Fetch (exact Karigar pattern) ─────────────────────────
+// ── Fetch — exact Karigar Batch Tracker pattern ───────────
 async function fetchAllPages(){
   let results=[],url=`${SERVER}/api/v2/assets/${UID}/data/?format=json&limit=100`;
   while(url){
     const res=await fetch(PROXY+encodeURIComponent(url),{headers:{'Authorization':`Token ${TOKEN}`,'x-requested-with':'XMLHttpRequest'}});
-    if(!res.ok)throw new Error(`API error ${res.status} — check token and asset UID`);
+    if(!res.ok)throw new Error(`API error ${res.status} — check token / asset UID`);
     const data=await res.json();
     results=results.concat(data.results||[]);
     url=data.next||null;
@@ -353,13 +397,10 @@ function detectFields(){
   const norm=s=>s.toLowerCase().replace(/[^a-z0-9]/g,'');
   const fm={};
   for(const[type,cands]of Object.entries(CANDS)){
-    // exact
-    for(const c of cands){const m=allKeys.find(k=>k===c);if(m){fm[type]=m;break;}}
+    for(const c of cands){if(allKeys.find(k=>k===c)){fm[type]=allKeys.find(k=>k===c);break;}}
     if(fm[type])continue;
-    // group suffix
     for(const c of cands){const m=allKeys.find(k=>k.endsWith('/'+c));if(m){fm[type]=m;break;}}
     if(fm[type])continue;
-    // fuzzy
     for(const key of allKeys){
       for(const c of cands){if(norm(key).includes(norm(c))||norm(c).includes(norm(key))){fm[type]=key;break;}}
       if(fm[type])break;
@@ -370,65 +411,67 @@ function detectFields(){
   return fm;
 }
 
-// ── Activity / Duration column discovery ─────────────────
+// ── Discover activity & duration columns ──────────────────
+// Mirrors Power Query: ActivityColumns = List.Select(..., Text.StartsWith(_, "Activity/Task Done"))
+//                      DurationColumns = List.Select(..., Text.StartsWith(_, "Approx. Duration"))
 function discoverActivityCols(){
-  const norm=k=>k.toLowerCase().replace(/[^a-z0-9_]/g,'');
-  // Activity columns: starts with "Activity/Task Done" or similar
+  const norm=k=>k.toLowerCase().replace(/[^a-z0-9]/g,'');
   actCols=allKeys
-    .filter(k=>{const n=norm(k);return n.startsWith('activity_task_done')||n.startsWith('activitytaskdone')||n.startsWith('activity/task')||k.startsWith('Activity/Task Done')||k.startsWith('Activity/Task')||k.startsWith('Activity_Task')})
+    .filter(k=>k.startsWith('Activity/Task Done')||k.startsWith('Activity_Task_Done')||norm(k).startsWith('activitytaskdone'))
     .sort((a,b)=>{
-      const na=a==='Activity/Task Done'||a==='Activity_Task_Done'?0:parseInt(a.match(/(\d+)$/)?.[1]||0);
-      const nb=b==='Activity/Task Done'||b==='Activity_Task_Done'?0:parseInt(b.match(/(\d+)$/)?.[1]||0);
+      const na=a==='Activity/Task Done'?0:parseInt(a.match(/(\d+)$/)?.[1]??999);
+      const nb=b==='Activity/Task Done'?0:parseInt(b.match(/(\d+)$/)?.[1]??999);
       return na-nb;
     });
-  // Duration columns
   durCols=allKeys
-    .filter(k=>{const n=norm(k);return n.startsWith('approx_duration')||n.startsWith('approxduration')||k.startsWith('Approx. Duration')||k.startsWith('Approx_Duration')})
+    .filter(k=>k.startsWith('Approx. Duration')||k.startsWith('Approx_Duration')||norm(k).startsWith('approxduration'))
     .sort((a,b)=>{
-      const na=a.includes('Duration (mins)')||a.includes('Duration_mins_')?0:parseInt(a.match(/(\d+)$/)?.[1]||0);
-      const nb=b.includes('Duration (mins)')||b.includes('Duration_mins_')?0:parseInt(b.match(/(\d+)$/)?.[1]||0);
+      const na=a==='Approx. Duration (mins)'?0:parseInt(a.match(/(\d+)$/)?.[1]??999);
+      const nb=b==='Approx. Duration (mins)'?0:parseInt(b.match(/(\d+)$/)?.[1]??999);
       return na-nb;
     });
 }
 
-// ── Activities from one record ────────────────────────────
+// ── Activities from one record (mirrors Power Query logic) ─
+// Pairs actCols[i] ↔ durCols[i], skips blank activities
 function getActivities(rec){
-  const acts=[];
-  const pairCount=Math.min(actCols.length,durCols.length||actCols.length);
+  const out=[];
   for(let i=0;i<actCols.length;i++){
     const av=rec[actCols[i]];
-    if(av&&String(av).trim()&&String(av).toLowerCase()!=='false'&&String(av)!=='0'){
-      const dv=i<durCols.length?rec[durCols[i]]:null;
-      acts.push({task:String(av).trim(),mins:dv!==null&&dv!==undefined&&dv!==''&&dv!==false?parseFloat(dv):null});
-    }
+    if(av==null||av===''||av===false||String(av).toLowerCase()==='false'||String(av).trim()==='')continue;
+    const raw=i<durCols.length?rec[durCols[i]]:null;
+    const mins=(raw!==null&&raw!==undefined&&raw!==''&&raw!==false)?parseFloat(raw):null;
+    out.push({task:String(av).trim(),mins:(!isNaN(mins)&&mins>0)?mins:null});
   }
-  return acts;
+  return out;
 }
 
-// ── Total minutes across all records ──────────────────────
+// ── KRAs from one record ───────────────────────────────────
+// The select_multiple combined field returns space-separated internal names
+// Mirrors Power Query: UnpivotKRA + KeepSelectedOnly (not null/false/0)
+function getKRAs(rec){
+  const raw=String(gv(rec,fieldMap.kra)||'').trim();
+  if(!raw||raw==='false'||raw==='0')return[];
+  return raw.split(/\s+/)
+    .filter(k=>k&&k!=='false'&&k!=='0')
+    .map(k=>KRA_LABELS[k.trim()]||k.trim().replace(/_/g,' '));
+}
+
+// ── Total minutes (positive only, mirrors DAX Reported Minutes) ─
 function totalMins(data){
   let t=0;
   data.forEach(rec=>{
     durCols.forEach(col=>{
       const v=parseFloat(rec[col]);
-      if(!isNaN(v)&&v>0&&v<2000)t+=v; // cap at 2000 to ignore bad data
+      // DAX: Activities[Approx. Duration (mins)] > 0
+      // Power Query replaced 15120 with 1440, so we cap at 1440 mins = 24h
+      if(!isNaN(v)&&v>0&&v<=1440)t+=v;
     });
   });
   return t;
 }
 
-// ── KRAs from one record ───────────────────────────────────
-// The combined select_multiple field returns space-separated internal names
-function getKRAs(rec){
-  const raw=String(gv(rec,fieldMap.kra)||'').trim();
-  if(!raw||raw==='false'||raw==='0')return[];
-  return raw.split(/\s+/).filter(k=>k&&k!=='false'&&k!=='0').map(k=>{
-    const clean=k.trim();
-    return KRA_LABELS[clean]||clean.replace(/_/g,' ');
-  });
-}
-
-// ── User map ───────────────────────────────────────────────
+// ── Build user map ─────────────────────────────────────────
 function buildUserMap(){
   userMap={};
   allData.forEach(r=>{
@@ -440,8 +483,9 @@ function buildUserMap(){
 function fillDropdown(){
   const sel=document.getElementById('nameSelect');
   const names=Object.keys(userMap).sort();
-  if(!names.length){sel.innerHTML='<option value="">No names found — check field config</option>';return;}
-  sel.innerHTML='<option value="">— Select name —</option>'+names.map(n=>`<option value="${esc(n)}">${esc(n)} (${userMap[n].length})</option>`).join('');
+  if(!names.length){sel.innerHTML='<option value="">No names found — check ⚙ Field Config</option>';return;}
+  sel.innerHTML='<option value="">— Select name —</option>'+
+    names.map(n=>`<option value="${esc(n)}">${esc(n)} (${userMap[n].length} day${userMap[n].length!==1?'s':''})</option>`).join('');
   document.getElementById('loginBtn').disabled=false;
 }
 
@@ -449,7 +493,8 @@ function fillDropdown(){
 function doLogin(){
   const name=document.getElementById('nameSelect').value.trim();
   if(!name){const e=document.getElementById('lerr');e.textContent='Please select your name.';e.style.display='block';return;}
-  currentUser=name;userData=userMap[name]||[];
+  currentUser=name;
+  userData=userMap[name]||[];
   document.getElementById('userChip').textContent='👤 '+name;
   document.getElementById('userChip').style.display='inline-block';
   document.getElementById('logoutBtn').style.display='inline-flex';
@@ -463,7 +508,7 @@ function doLogout(){
   currentUser=null;userData=[];
   document.getElementById('userChip').style.display='none';
   document.getElementById('logoutBtn').style.display='none';
-  document.getElementById('navSub').textContent='Karigar';
+  document.getElementById('navSub').textContent='Personal Dashboard';
   document.getElementById('dash').style.display='none';
   document.getElementById('loginWrap').style.display='flex';
   if(CHS.pie){CHS.pie.destroy();delete CHS.pie;}
@@ -506,152 +551,213 @@ function applyFilters(){
   renderKPIs(d);renderCharts(d);renderTables(d);
 }
 
-// ── KPIs ──────────────────────────────────────────────────
+// ── KPIs — matching DAX measures exactly ─────────────────
 function renderKPIs(d){
+  // Total Submissions = COUNTROWS('Karigar - Daily Reporting')
   set('k0',d.length);
   document.getElementById('k0s').textContent='of '+userData.length+' total';
-  set('k1',d.filter(r=>{const t=String(gv(r,fieldMap.workType)||'').toLowerCase();return t.includes('lab')||t.includes('field');}).length);
-  const ses=numSum(d,fieldMap.sessions);set('k2',ses!==null?ses:'—');
-  // Courses: count non-empty entries
-  const crsCount=d.filter(r=>String(gv(r,fieldMap.courses)||'').trim()).length;
-  set('k3',crsCount||'—');
-  // KRA entries: sum of all expanded KRA buckets
+
+  // Lab/Field Reports = COUNTROWS(FILTER(..., Working Type IN {Lab,Field}))
+  // (DAX also groups by Staff+Date but since we filter to one person it's the same)
+  set('k1',d.filter(r=>{
+    const t=String(gv(r,fieldMap.workType)||'').toLowerCase();
+    return t==='lab'||t==='field';
+  }).length);
+
+  // Total Sessions = SUM('Karigar - Daily Reporting'[Number of Sessions])
+  let ses=0;d.forEach(r=>{const v=parseFloat(gv(r,fieldMap.sessions));if(!isNaN(v)&&v>0)ses+=v;});
+  set('k2',ses||'—');
+
+  // Count of Course(s) = count of non-blank Course(s) entries
+  set('k3',d.filter(r=>String(gv(r,fieldMap.courses)||'').trim()).length||'—');
+
+  // KRA Activities = COUNTROWS(KRA) = total unpivoted KRA rows
   let kraTotal=0;d.forEach(r=>kraTotal+=getKRAs(r).length);
   set('k4',kraTotal||'—');
-  // Total hours from all duration cols
+
+  // Reported Hours = SUM(Activities[Duration > 0]) / 60
   const mins=totalMins(d);
-  set('k5',mins>0?(Math.round(mins/60*10)/10)+' h':'—');
+  set('k5',mins>0?(Math.round(mins/60*100)/100):'—');
 }
 
 // ── Charts ────────────────────────────────────────────────
 function renderCharts(d){
-  // Pie: work type
+  // ── Pie: Working Type ──
   const tMap={};
   d.forEach(r=>{const t=String(gv(r,fieldMap.workType)||'Other').trim()||'Other';tMap[t]=(tMap[t]||0)+1;});
   const pL=Object.keys(tMap),pD=Object.values(tMap);
-  const pC=pL.map(l=>{const n=l.toLowerCase().replace(/\s+/g,'');for(const[k,v]of Object.entries(WT_COLS))if(n.includes(k.replace(/\s/g,'')))return v;return WT_COLS.other;});
+  const pC=pL.map(l=>wtColor(l));
   if(CHS.pie)CHS.pie.destroy();
-  if(pD.length)CHS.pie=new Chart(document.getElementById('pieC').getContext('2d'),{
-    type:'doughnut',
-    data:{labels:pL,datasets:[{data:pD,backgroundColor:pC,borderWidth:2,borderColor:'#fff',hoverOffset:4}]},
-    options:{responsive:true,maintainAspectRatio:false,cutout:'60%',
-      plugins:{legend:{position:'bottom',labels:{boxWidth:10,padding:12,font:{size:11}}}}}
-  });
+  if(pD.length){
+    CHS.pie=new Chart(document.getElementById('pieC').getContext('2d'),{
+      type:'doughnut',
+      data:{labels:pL,datasets:[{data:pD,backgroundColor:pC,borderWidth:2,borderColor:'#fff',hoverOffset:4}]},
+      options:{responsive:true,maintainAspectRatio:false,cutout:'55%',
+        plugins:{legend:{position:'bottom',labels:{boxWidth:10,padding:10,font:{size:10}}}}}
+    });
+  }
 
-  // Bar: KRA (split by space, map to labels)
+  // ── Horizontal Bar: KRA Distribution (matches Power BI layout) ──
   const kMap={};
-  d.forEach(r=>{getKRAs(r).forEach(label=>{kMap[label]=(kMap[label]||0)+1;});});
-  const bL=Object.keys(kMap).sort((a,b)=>kMap[b]-kMap[a]);
-  const bD=bL.map(l=>kMap[l]);
-  // Short labels for chart (first 2-3 words)
-  const bShort=bL.map(l=>l.length>22?l.slice(0,22)+'…':l);
+  d.forEach(r=>getKRAs(r).forEach(lbl=>{kMap[lbl]=(kMap[lbl]||0)+1;}));
+  // Sort descending by count (matches Power BI)
+  const bEntries=Object.entries(kMap).sort((a,b)=>b[1]-a[1]);
+  const bL=bEntries.map(e=>e[0]);
+  const bD=bEntries.map(e=>e[1]);
+
+  // Dynamic height: ~28px per bar
+  const barH=Math.max(160,bL.length*30+40);
+  document.getElementById('kraWrap').style.height=barH+'px';
+
   if(CHS.bar)CHS.bar.destroy();
-  if(bD.length)CHS.bar=new Chart(document.getElementById('barC').getContext('2d'),{
-    type:'bar',
-    data:{labels:bShort,datasets:[{data:bD,backgroundColor:BAR_PAL.slice(0,bL.length),borderRadius:5,borderSkipped:false}]},
-    options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:false},tooltip:{callbacks:{title:(items)=>bL[items[0].dataIndex]}}},
-      scales:{y:{beginAtZero:true,ticks:{stepSize:1,font:{size:10}},grid:{color:'#F1F5F9'}},
-              x:{ticks:{font:{size:9},maxRotation:35}}}}
-  });
+  if(bD.length){
+    CHS.bar=new Chart(document.getElementById('barC').getContext('2d'),{
+      type:'bar',
+      data:{labels:bL,datasets:[{data:bD,backgroundColor:'#4F46E5',borderRadius:3,barThickness:18}]},
+      options:{
+        indexAxis:'y',   // ← horizontal bars, matches Power BI
+        responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false},
+          tooltip:{callbacks:{title:items=>[bL[items[0].dataIndex]]}}},
+        scales:{
+          x:{beginAtZero:true,ticks:{stepSize:1,font:{size:10}},
+             grid:{color:'#F1F5F9'},title:{display:true,text:'KRA Count',font:{size:10},color:'#94A3B8'}},
+          y:{ticks:{font:{size:10}},grid:{display:false}}
+        }
+      }
+    });
+  }
 }
 
 // ── Tables ────────────────────────────────────────────────
 function renderTables(d){
   const sorted=[...d].sort((a,b)=>parseD(gv(b,fieldMap.date)).localeCompare(parseD(gv(a,fieldMap.date))));
 
-  // Sessions & Courses
+  // Sessions & Courses — one row per submission
   const sb=document.getElementById('tSC');
-  set('scCount',sorted.length+' rows');
+  set('scCnt',sorted.length+' rows');
   sb.innerHTML=sorted.length?sorted.map(r=>{
-    const dt=fmtDate(gv(r,fieldMap.date));
-    const lab=esc(String(gv(r,fieldMap.lab)||'—'));
-    const wt=String(gv(r,fieldMap.workType)||'—');
-    const ses=String(gv(r,fieldMap.sessions)||'—');
     const crs=String(gv(r,fieldMap.courses)||'—');
-    const n=wt.toLowerCase().replace(/\s+/g,'');
-    const col=Object.entries(WT_COLS).find(([k])=>n.includes(k.replace(/\s/g,'')))?.[1]||WT_COLS.other;
-    return`<tr><td>${esc(dt)}</td><td>${lab}</td><td><span class="badge" style="background:${col}1a;color:${col};border:1px solid ${col}33">${esc(wt)}</span></td><td>${esc(ses)}</td><td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(crs)}">${esc(crs.length>30?crs.slice(0,30)+'…':crs)}</td></tr>`;
+    const ses=gv(r,fieldMap.sessions);
+    return`<tr>
+      <td style="white-space:nowrap">${esc(fmtDate(gv(r,fieldMap.date)))}</td>
+      <td>${esc(String(gv(r,fieldMap.lab)||'—'))}</td>
+      <td>${wtBadge(String(gv(r,fieldMap.workType)||'—'))}</td>
+      <td>${esc(String(ses||'—'))}</td>
+      <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(crs)}">${esc(crs.length>28?crs.slice(0,28)+'…':crs)}</td>
+    </tr>`;
   }).join(''):`<tr><td colspan="5" class="empty">No data</td></tr>`;
 
-  // Activities (expanded — one row per activity)
+  // Activities Done — one row per activity (expanded, like Activities table in Power BI)
+  // Columns: Date, Working, Activity/Task Done, Hours  (= Duration ÷ 60)
   const ab=document.getElementById('tAct');
   const actRows=[];
   sorted.forEach(r=>{
     const dt=fmtDate(gv(r,fieldMap.date));
+    const wt=String(gv(r,fieldMap.workType)||'—');
     const acts=getActivities(r);
     if(acts.length){
       acts.forEach(a=>{
-        const h=a.mins!==null?Math.round(a.mins/60*10)/10+' h ('+Math.round(a.mins)+' min)':'—';
-        actRows.push(`<tr><td style="white-space:nowrap">${esc(dt)}</td><td style="max-width:300px">${esc(a.task)}</td><td style="white-space:nowrap;color:var(--muted)">${esc(h)}</td></tr>`);
+        // Hours = Approx. Duration (mins) / 60, matching DAX: Reported Hours = DIVIDE(Reported Minutes, 60)
+        const hrs=a.mins!==null?String(Math.round(a.mins/60*100)/100)+' h':'—';
+        actRows.push(
+          `<tr>
+            <td style="white-space:nowrap">${esc(dt)}</td>
+            <td>${wtBadge(wt)}</td>
+            <td style="max-width:260px">${esc(a.task)}</td>
+            <td style="white-space:nowrap;color:var(--muted)">${esc(hrs)}</td>
+          </tr>`
+        );
       });
-    } else {
-      // fallback: show the single activity field if no multi-activity cols found
-      const act=String(gv(r,fieldMap.activity||'')||'');
-      if(act)actRows.push(`<tr><td style="white-space:nowrap">${esc(fmtDate(gv(r,fieldMap.date)))}</td><td>${esc(act)}</td><td>—</td></tr>`);
     }
   });
-  set('actCount',actRows.length+' activities');
-  ab.innerHTML=actRows.length?actRows.join(''):`<tr><td colspan="3" class="empty">No activities found</td></tr>`;
+  set('actCnt',actRows.length+' activities');
+  ab.innerHTML=actRows.length?actRows.join(''):`<tr><td colspan="4" class="empty">No activities found — check ⚙ Field Config</td></tr>`;
 }
 
-// ── Excel download ────────────────────────────────────────
+// ── Excel download — 4 sheets matching Power BI tables ────
 function doDownload(){
-  const d=getFiltered();if(!d.length){alert('No data.');return;}
+  const d=getFiltered();
+  if(!d.length){alert('No data for selected filters.');return;}
   try{
     const wb=XLSX.utils.book_new();
-    // Summary
     const sorted=[...d].sort((a,b)=>parseD(gv(b,fieldMap.date)).localeCompare(parseD(gv(a,fieldMap.date))));
     const mins=totalMins(d);
     let kraTotal=0;d.forEach(r=>kraTotal+=getKRAs(r).length);
+
+    // Summary
     const sumRows=[
-      ['Daily Report — '+currentUser],[''],
+      ['Karigar Daily Report — '+currentUser],[''],
       ['From',document.getElementById('dfrom').value],
       ['To',document.getElementById('dto').value],
       ['Generated',new Date().toLocaleString()],[''],
       ['Metric','Value'],
-      ['Total Days',d.length],
-      ['Lab/Field Days',d.filter(r=>{const t=String(gv(r,fieldMap.workType)||'').toLowerCase();return t.includes('lab')||t.includes('field');}).length],
-      ['Sessions',numSum(d,fieldMap.sessions)??'N/A'],
-      ['KRA Entries',kraTotal],
-      ['Total Hours',mins>0?Math.round(mins/60*10)/10:'N/A'],
+      ['Total Submissions',d.length],
+      ['Lab/Field Reports',d.filter(r=>{const t=String(gv(r,fieldMap.workType)||'').toLowerCase();return t==='lab'||t==='field';}).length],
+      ['Total Sessions',(()=>{let s=0;d.forEach(r=>{const v=parseFloat(gv(r,fieldMap.sessions));if(!isNaN(v)&&v>0)s+=v;});return s||'N/A'})()],
+      ['Count of Course(s)',d.filter(r=>String(gv(r,fieldMap.courses)||'').trim()).length],
+      ['KRA Activities',kraTotal],
+      ['Reported Hours',mins>0?Math.round(mins/60*100)/100:'N/A'],
     ];
     XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(sumRows),'Summary');
-    // Sessions & Courses sheet
-    const scSheet=[['Date','Lab','Working Type','Sessions','Courses']];
-    sorted.forEach(r=>scSheet.push([parseD(gv(r,fieldMap.date)),gv(r,fieldMap.lab),gv(r,fieldMap.workType),gv(r,fieldMap.sessions),gv(r,fieldMap.courses)]));
-    XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(scSheet.slice(1).map(r=>({Date:r[0],Lab:r[1],'Working Type':r[2],Sessions:r[3],Courses:r[4]}))),'Sessions & Courses');
-    // Activities sheet (expanded)
-    const actSheet=[];
+
+    // Sessions & Courses
+    const scRows=sorted.map(r=>({
+      'Date':parseD(gv(r,fieldMap.date)),
+      'Select Lab':String(gv(r,fieldMap.lab)||''),
+      'Working Type':String(gv(r,fieldMap.workType)||''),
+      'Number of Sessions':gv(r,fieldMap.sessions)||'',
+      'Course(s)':String(gv(r,fieldMap.courses)||''),
+    }));
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(scRows),'Sessions & Courses');
+
+    // Activities (expanded — matches Activities Power Query table)
+    const actRows=[];
     sorted.forEach(r=>{
       const dt=parseD(gv(r,fieldMap.date));
-      const lab=gv(r,fieldMap.lab);
-      const wt=gv(r,fieldMap.workType);
-      getActivities(r).forEach(a=>{actSheet.push({'Date':dt,'Lab':lab,'Working Type':wt,'Activity/Task Done':a.task,'Duration (mins)':a.mins??''});});
+      const lab=String(gv(r,fieldMap.lab)||'');
+      const wt=String(gv(r,fieldMap.workType)||'');
+      getActivities(r).forEach(a=>{
+        actRows.push({
+          'Date':dt,'Select Lab':lab,'Staff Name':currentUser,'Working Type':wt,
+          'Activity/Task Done':a.task,
+          'Approx. Duration (mins)':a.mins??'',
+          'Hours':a.mins!=null?Math.round(a.mins/60*100)/100:'',
+        });
+      });
     });
-    if(actSheet.length)XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(actSheet),'Activities');
-    // KRA sheet
-    const kraSheet=[];
+    if(actRows.length)XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(actRows),'Activities');
+
+    // KRA (matches KRA Power Query table)
+    const kraRows=[];
     sorted.forEach(r=>{
       const dt=parseD(gv(r,fieldMap.date));
-      getKRAs(r).forEach(k=>kraSheet.push({'Date':dt,'Staff Name':currentUser,'KRA Bucket':k}));
+      const lab=String(gv(r,fieldMap.lab)||'');
+      const wt=String(gv(r,fieldMap.workType)||'');
+      getKRAs(r).forEach(bucket=>{
+        kraRows.push({'Date':dt,'Select Lab':lab,'Staff Name':currentUser,'Working Type':wt,'KRA Bucket':bucket});
+      });
     });
-    if(kraSheet.length)XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(kraSheet),'KRA');
+    if(kraRows.length)XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(kraRows),'KRA');
+
     XLSX.writeFile(wb,`${currentUser.replace(/\s+/g,'_')}_DailyReport_${new Date().toISOString().slice(0,10)}.xlsx`);
   }catch(e){alert('Download error: '+e.message);}
 }
 
-// ── Field config ──────────────────────────────────────────
+// ── Field Config ──────────────────────────────────────────
 function setupCfg(){
-  const visKeys=allKeys.filter(k=>!k.startsWith('_')||k==='_submission_time');
-  document.getElementById('cfgFields').textContent=visKeys.join(', ');
+  const vis=allKeys.filter(k=>!k.startsWith('_')||k==='_submission_time');
+  document.getElementById('cfgFields').textContent=vis.join(', ');
   document.getElementById('cfgGrid').innerHTML=
-    Object.entries({name:'Staff Name',date:'Date',lab:'Lab',workType:'Work Type',sessions:'Sessions',courses:'Courses',kra:'KRA Field'})
-    .map(([t,l])=>`<div class="cfgf"><label>${l}</label><select id="cfg_${t}"><option value="">—</option>${allKeys.map(k=>`<option value="${esc(k)}"${fieldMap[t]===k?' selected':''}>${esc(k)}</option>`).join('')}</select></div>`).join('');
+    Object.entries({name:'Staff Name',date:'Date',lab:'Select Lab',workType:'Working Type',
+                     sessions:'Number of Sessions',courses:'Course(s)',kra:'KRA Bucket Field'})
+    .map(([t,l])=>`<div class="cfgf"><label>${l}</label><select id="cfg_${t}"><option value="">— not set —</option>${allKeys.map(k=>`<option value="${esc(k)}"${fieldMap[t]===k?' selected':''}>${esc(k)}</option>`).join('')}</select></div>`).join('');
 }
 
 function saveCfg(){
-  ['name','date','lab','workType','sessions','courses','kra'].forEach(t=>{const e=document.getElementById('cfg_'+t);if(e)fieldMap[t]=e.value||undefined;});
+  ['name','date','lab','workType','sessions','courses','kra'].forEach(t=>{
+    const e=document.getElementById('cfg_'+t);if(e&&e.value)fieldMap[t]=e.value;
+  });
   buildUserMap();fillDropdown();discoverActivityCols();applyFilters();
   document.getElementById('cfgB').classList.remove('open');
 }
@@ -669,18 +775,20 @@ async function fetchData(){
 
   try{
     allData=await fetchAllPages();
-    const ks=new Set();allData.slice(0,30).forEach(r=>Object.keys(r).forEach(k=>ks.add(k)));allKeys=[...ks];
+    const ks=new Set();allData.slice(0,30).forEach(r=>Object.keys(r).forEach(k=>ks.add(k)));
+    allKeys=[...ks];
     fieldMap=detectFields();
     discoverActivityCols();
-    buildUserMap();fillDropdown();
+    buildUserMap();
+    fillDropdown();
     document.getElementById('loginWrap').style.display='flex';
     const t=new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
-    pill.className='pill on';document.getElementById('pillTxt').textContent=t;
-    document.querySelector('#pill .dot').classList.remove('spin');
-    document.getElementById('navSub').textContent='Karigar';
-    if(!allData.length)document.getElementById('bannerArea').innerHTML=`<div class="banner banner-ok" style="max-width:1120px;margin:12px auto 0">Connected — no submissions found yet.</div>`;
+    pill.className='pill on';
+    document.getElementById('pillTxt').textContent=t;
+    document.querySelector('#pill .dot').classList.remove('sp');
+    document.getElementById('navSub').textContent='Personal Dashboard';
   }catch(e){
-    document.getElementById('bannerArea').innerHTML=`<div class="banner banner-err" style="max-width:1120px;margin:12px auto 0"><strong>Failed to load:</strong> ${e.message}</div>`;
+    document.getElementById('bannerArea').innerHTML=`<div class="banner banner-err"><strong>Failed to load:</strong> ${e.message}</div>`;
     document.getElementById('navSub').textContent='Error';
     pill.className='pill';
     console.error(e);
@@ -690,7 +798,9 @@ async function fetchData(){
   }
 }
 
-document.getElementById('nameSelect').addEventListener('change',function(){document.getElementById('loginBtn').disabled=!this.value;});
+document.getElementById('nameSelect').addEventListener('change',function(){
+  document.getElementById('loginBtn').disabled=!this.value;
+});
 window.onload=fetchData;
 </script>
 </body>
