@@ -547,19 +547,6 @@ function transformData() {
     // DurationColumns = List.Select(cols, each Text.StartsWith(_, "Approx. Duration"))
     // PairCount = List.Min({Count(act), Count(dur)})
     // → one row per non-blank activity, paired with its duration
-    // ── Collect KRA buckets for this record ─────────────────────
-    const recKRA = [];
-    if (kraSubCols.length > 0) {
-      kraSubCols.forEach(col => {
-        const val = rec[col];
-        if (!val || val === false || String(val) === '0' || String(val).toLowerCase() === 'false') return;
-        recKRA.push(col.split('/').slice(1).join('/').trim().toLowerCase());
-      });
-    } else {
-      const combined = String(gv(rec, fieldMap.kra) || '').trim();
-      if (combined) combined.split(' ').filter(Boolean).forEach(k => recKRA.push(k.toLowerCase()));
-    }
-
     // ── Activities (exact mirror of Power Query Activities table) ─
     // ActivityColumns = List.Select(cols, each Text.StartsWith(_, "Activity/Task Done"))
     // DurationColumns = List.Select(cols, each Text.StartsWith(_, "Approx. Duration"))
@@ -820,16 +807,9 @@ function renderTables(records, activities) {
     .sort((a, b) => parseD(String(gv(b, fieldMap.date)||'')).localeCompare(parseD(String(gv(a, fieldMap.date)||''))));
   // Exclude activities from records where Session & Program Execution is a KRA bucket
   // (those days are already captured in the Sessions & Courses table)
-  // Exclude activities from Session & Program Execution records
-  // (those days are captured in Sessions & Courses instead)
-  const isSessionKRA = kra => kra.some(k =>
-    k === 'grp_session' ||
-    k === 'session_program_execution' ||
-    k.toLowerCase() === 'session & program execution' ||
-    (k.includes('session') && k.includes('program'))
-  );
+  // Show ALL activities — grp_session has no activity_others column anyway
+  // (session group only has num_sessions + course, captured in Sessions & Courses table)
   const sortedAct = [...activities]
-    .filter(a => !isSessionKRA(a.kra || []))
     .sort((a, b) => parseD(b.date).localeCompare(parseD(a.date)));
 
   // ── Sessions & Courses — columns matching Power BI exactly ──
