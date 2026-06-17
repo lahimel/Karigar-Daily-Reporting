@@ -507,15 +507,31 @@ function transformData() {
   const durBase  = schemaMap['Approx. Duration (mins)']  || 'duration_others';
   const kraQName = schemaMap['Select KRA Bucket(s)']     || 'kra_bucket';
 
-  // Activity cols: "activity_others" OR "grp_xxx/activity_others"
+  // Match activity/duration cols in ALL possible API naming formats:
+  // - flat:           "activity_others", "activity_others_001", "activity_others_002"
+  // - group-prefixed: "grp_lab/activity_others", "grp_lab/activity_others_001"
+  // Strategy: extract the last segment after "/" and check if it matches the base name
+  const lastSeg = k => k.includes('/') ? k.split('/').pop() : k;
+
   actCols = allKeys
-    .filter(k => k === actBase || k.endsWith('/' + actBase))
+    .filter(k => {
+      const seg = lastSeg(k);
+      return seg === actBase || seg.startsWith(actBase + '_');
+    })
     .sort((a, b) => a.localeCompare(b));
 
-  // Duration cols: "duration_others" OR "grp_xxx/duration_others" — sorted same way as actCols
   durCols = allKeys
-    .filter(k => k === durBase || k.endsWith('/' + durBase))
+    .filter(k => {
+      const seg = lastSeg(k);
+      return seg === durBase || seg.startsWith(durBase + '_');
+    })
     .sort((a, b) => a.localeCompare(b));
+
+  // Log to console so we can see exactly what was found
+  console.log('actBase:', actBase, '| durBase:', durBase);
+  console.log('actCols:', actCols);
+  console.log('durCols:', durCols);
+  console.log('All keys:', allKeys.filter(k => !k.startsWith('_')));
 
   // KRA boolean sub-cols: "kra_bucket/grp_session", "kra_bucket/grp_lab_operations_management" etc.
   kraSubCols = allKeys.filter(k => k.startsWith(kraQName + '/'));
