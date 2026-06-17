@@ -495,6 +495,19 @@ function transformData() {
     // DurationColumns = List.Select(cols, each Text.StartsWith(_, "Approx. Duration"))
     // PairCount = List.Min({Count(act), Count(dur)})
     // → one row per non-blank activity, paired with its duration
+    // Collect KRA buckets for this record (used to filter activities later)
+    const recKRA = [];
+    if (kraSubCols.length > 0) {
+      kraSubCols.forEach(col => {
+        const val = rec[col];
+        if (!val || val === false || String(val) === '0' || String(val).toLowerCase() === 'false') return;
+        recKRA.push(col.split('/').slice(1).join('/').trim().toLowerCase());
+      });
+    } else {
+      const combined = String(gv(rec, fieldMap.kra) || '').trim();
+      if (combined) combined.split(/\s+/).filter(Boolean).forEach(k => recKRA.push(k.toLowerCase()));
+    }
+
     for (let i = 0; i < actCols.length; i++) {
       const task = rec[actCols[i]];
       if (!task || String(task).trim() === '' || String(task).toLowerCase() === 'false') continue;
@@ -510,6 +523,7 @@ function transformData() {
         task:  String(task).trim(),
         mins,
         hours: mins !== null ? mins / 60 : null,
+        kra:   recKRA,   // store record's KRA buckets for filtering
       });
     }
 
@@ -737,7 +751,16 @@ function renderTables(records, activities) {
       return (!isNaN(ses) && ses > 0) || crs !== '';
     })
     .sort((a, b) => parseD(String(gv(b, fieldMap.date)||'')).localeCompare(parseD(String(gv(a, fieldMap.date)||''))));
-  const sortedAct = [...activities].sort((a, b) => parseD(b.date).localeCompare(parseD(a.date)));
+  // Exclude activities from records where Session & Program Execution is a KRA bucket
+  // (those days are already captured in the Sessions & Courses table)
+  const isSessionKRA = kra => kra.some(k =>
+    k.includes('session') && (k.includes('program') || k.includes('execution'))
+    || k === 'session_program_execution'
+    || k.toLowerCase() === 'session & program execution'
+  );
+  const sortedAct = [...activities]
+    .filter(a => !isSessionKRA(a.kra || []))
+    .sort((a, b) => parseD(b.date).localeCompare(parseD(a.date)));
 
   // ── Sessions & Courses — columns matching Power BI exactly ──
   // Date | Staff Name | Course(s) | Other Course Name | Select Lab | Total Submissions | Active Work Days | Total Sessions
