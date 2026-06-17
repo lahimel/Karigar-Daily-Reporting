@@ -347,6 +347,7 @@ const BAR_PAL = ['#4F46E5','#0D9488','#16A34A','#D97706','#E11D48','#7C3AED',
                  '#0EA5E9','#F97316','#84CC16','#EC4899','#3B82F6','#F59E0B'];
 
 // ── State ─────────────────────────────────────────────────
+let schemaMap       = {};   // label → internal field name (from form schema)
 let rawData         = [];   // raw API records
 let activitiesTable = [];   // transformed: one row per activity  (mirrors Activities PQ table)
 let kraTable        = [];   // transformed: one row per KRA bucket (mirrors KRA PQ table)
@@ -393,37 +394,46 @@ function wtBadge(wt) {
   return `<span class="badge" style="background:${c}18;color:${c};border:1px solid ${c}30">${esc(wt||'—')}</span>`;
 }
 
-// ── Fetch — uses the same XLSX export your Power Query uses ──
-// This gives exact label-based column names: "Activity/Task Done",
-// "Approx. Duration (mins)", "Select KRA Bucket(s)/Session & Program Execution", etc.
-const EXPORT_URL = `${SERVER}/api/v2/assets/${UID}/export-settings/esMNwRKY6CJs6T8gaK9oxMJ/data.xlsx`;
+// ── Fetch — JSON API + form schema for exact field names ─────────
+// Step 1: fetch the form schema to map labels → internal field names
+// Step 2: fetch all submission data from the JSON API
+// This avoids guessing internal names like "activity_task_done_001"
+
+async function fetchSchema() {
+  // Returns map: "Activity/Task Done" → "activity_task_done" (whatever KoboToolbox calls it)
+  try {
+    const url = `${SERVER}/api/v2/assets/${UID}/?format=json`;
+    const res = await fetch(PROXY + encodeURIComponent(url), {
+      headers: { 'Authorization': `Token ${TOKEN}`, 'x-requested-with': 'XMLHttpRequest' }
+    });
+    if (!res.ok) return {};
+    const asset = await res.json();
+    const map = {};
+    (asset?.content?.survey || []).forEach(q => {
+      const autoname = q.$autoname || q.name;
+      if (!autoname) return;
+      const label = Array.isArray(q.label) ? q.label[0] : (q.label || '');
+      if (label) map[String(label).trim()] = String(autoname).trim();
+    });
+    return map;
+  } catch(e) {
+    console.warn('Schema fetch failed:', e);
+    return {};
+  }
+}
 
 async function fetchAllPages() {
-  const res = await fetch(PROXY + encodeURIComponent(EXPORT_URL), {
-    headers: { 'Authorization': `Token ${TOKEN}`, 'x-requested-with': 'XMLHttpRequest' }
-  });
-  if (!res.ok) throw new Error(`Export error ${res.status} — check token`);
-
-  const buffer = await res.arrayBuffer();
-  const wb = XLSX.read(buffer, { type: 'array', cellDates: true });
-
-  // Find the main data sheet (same as Power Query: Item = "Karigar - Daily Reporting")
-  const sheetName = wb.SheetNames.find(s => s.toLowerCase().includes('karigar')) || wb.SheetNames[0];
-  if (!sheetName) throw new Error('No sheet found in export file');
-
-  const ws = wb.Sheets[sheetName];
-  const rows = XLSX.utils.sheet_to_json(ws, { defval: null });
-
-  // Normalise date column to YYYY-MM-DD string (SheetJS returns Date objects with cellDates:true)
-  rows.forEach(row => {
-    if (row['Date'] instanceof Date) {
-      // Convert to local date string to avoid UTC offset shifting the day
-      const d = row['Date'];
-      row['Date'] = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-    }
-  });
-
-  return rows;
+  let results = [], url = `${SERVER}/api/v2/assets/${UID}/data/?format=json&limit=100`;
+  while (url) {
+    const res = await fetch(PROXY + encodeURIComponent(url), {
+      headers: { 'Authorization': `Token ${TOKEN}`, 'x-requested-with': 'XMLHttpRequest' }
+    });
+    if (!res.ok) throw new Error(`API error ${res.status} — check token / asset UID`);
+    const data = await res.json();
+    results = results.concat(data.results || []);
+    url = data.next || null;
+  }
+  return results;
 }
 
 // ── Field detection ───────────────────────────────────────
@@ -475,20 +485,41 @@ function detectFields() {
 // Called once after fetch. Builds activitiesTable and kraTable.
 function transformData() {
 
-  // Discover column groups (with ?lang=:en-label these match PQ label names)
+  // ── Discover column groups using schema map + broad fallback ────
+  // schemaMap gives us: "Activity/Task Done" → exact internal name (e.g. "activity_task_done")
+  // We use that as the prefix to find all numbered variants in allKeys
+
+  const actBase = schemaMap['Activity/Task Done'] || '';
+  const durBase = schemaMap['Approx. Duration (mins)'] || '';
+  const kraBase = schemaMap['Select KRA Bucket(s)'] || '';
+
+  // Activity columns: exact schema name OR broad fallback
   actCols = allKeys
-    .filter(k => k.startsWith('Activity/Task Done') || norm(k).startsWith('activitytaskdone'))
+    .filter(k => {
+      if (actBase && (k === actBase || k.startsWith(actBase + '_'))) return true;
+      return k.startsWith('Activity/Task Done') || norm(k).startsWith('activitytaskdone');
+    })
     .sort(byNum);
 
+  // Duration columns: exact schema name OR broad fallback
   durCols = allKeys
-    .filter(k => k.startsWith('Approx. Duration') || norm(k).startsWith('approxduration'))
+    .filter(k => {
+      if (durBase && (k === durBase || k.startsWith(durBase + '_'))) return true;
+      return k.startsWith('Approx. Duration') || norm(k).startsWith('approxduration');
+    })
     .sort(byNum);
 
-  // KRA boolean sub-columns: "Select KRA Bucket(s)/Session & Program Execution" etc.
-  kraSubCols = allKeys.filter(k =>
-    k.startsWith('Select KRA Bucket(s)/') ||
-    k.startsWith('Select_KRA_Bucket') && k.includes('/')
-  );
+  // KRA boolean sub-columns
+  kraSubCols = allKeys.filter(k => {
+    if (kraBase && k.startsWith(kraBase + '/')) return true;
+    return k.startsWith('Select KRA Bucket(s)/') ||
+           (k.startsWith('Select_KRA_Bucket') && k.includes('/'));
+  });
+
+  console.log('Schema map (label→name):', JSON.stringify(schemaMap));
+  console.log('actCols:', actCols);
+  console.log('durCols:', durCols);
+  console.log('kraSubCols:', kraSubCols.length, 'found');
 
   activitiesTable = [];
   kraTable        = [];
@@ -983,17 +1014,23 @@ async function fetchData() {
   document.getElementById('pillTxt').textContent = 'syncing';
 
   try {
-    rawData = await fetchAllPages();
+    // Fetch schema AND data in parallel
+    const [schema, data] = await Promise.all([fetchSchema(), fetchAllPages()]);
+    rawData = data;
 
     // Build allKeys from all records
     const ks = new Set();
     rawData.slice(0, 30).forEach(r => Object.keys(r).forEach(k => ks.add(k)));
     allKeys = [...ks];
 
-    // 1. Detect field names
+    // 1. Detect field names (using schema label→name map for accuracy)
     fieldMap = detectFields();
 
-    // 2. Transform: build activitiesTable and kraTable (mirrors Power Query)
+    // 2. Use schema to find exact internal names for activity & duration columns
+    //    schema maps "Activity/Task Done" → "activity_task_done" (the API field name)
+    schemaMap = schema;
+
+    // 3. Transform: build activitiesTable and kraTable (mirrors Power Query)
     transformData();
 
     // 3. Build user map for login dropdown
