@@ -337,9 +337,19 @@ const KRA_LABELS = {
   grp_student_innovation_support:           'Student Innovation Support',
   grp_proposal_curriculum_nsqf:             'Proposal/Curriculum/NSQF',
   grp_others:                               'Others',
-  // fallbacks for old internal names
+  // Without grp_ prefix (fallback for older form versions)
   session_program_execution:                'Session & Program Execution',
   lab_operations_management:                'Lab Operations & Management',
+  resource_inventory_management:            'Resource & Inventory Management',
+  budget_accounts:                          'Budget & Accounts',
+  supervisory_operational_support:          'Supervisory & Operational Support',
+  content_development_learning_design:      'Content Development & Learning Design',
+  stakeholder_engagement:                   'Stakeholder Engagement',
+  team_coordination:                        'Team Coordination',
+  cross_project_support:                    'Cross Project Support',
+  product_sale_inhouse_services:            'Product Sale & In-House Services',
+  student_innovation_support:               'Student Innovation Support',
+  proposal_curriculum_nsqf:                 'Proposal/Curriculum/NSQF',
   others:                                   'Others',
 };
 
@@ -507,31 +517,40 @@ function transformData() {
   const durBase  = schemaMap['Approx. Duration (mins)']  || 'duration_others';
   const kraQName = schemaMap['Select KRA Bucket(s)']     || 'kra_bucket';
 
-  // Match activity/duration cols in ALL possible API naming formats:
-  // - flat:           "activity_others", "activity_others_001", "activity_others_002"
-  // - group-prefixed: "grp_lab/activity_others", "grp_lab/activity_others_001"
-  // Strategy: extract the last segment after "/" and check if it matches the base name
-  const lastSeg = k => k.includes('/') ? k.split('/').pop() : k;
+  // Each KRA group has its own uniquely named activity/duration field:
+  //   active_work_group/grp_lab_operations_management/activity_lab_operations_management
+  //   active_work_group/grp_resource_inventory_management/activity_resource_inventory_management
+  //   active_work_group/grp_others/activity_others   ← only this one ends in activity_others
+  // Strategy: find all fields inside active_work_group/grp_*/activity_* or duration_*
+  //           skipping grp_session (has num_sessions/course, no activity) and outcomes_group
 
   actCols = allKeys
     .filter(k => {
-      const seg = lastSeg(k);
-      return seg === actBase || seg.startsWith(actBase + '_');
+      const parts = k.split('/');
+      if (parts.length < 3) return false;
+      if (parts[0] !== 'active_work_group') return false;
+      if (parts[1] === 'grp_session' || parts[1] === 'outcomes_group') return false;
+      return parts[2].startsWith('activity_');
     })
     .sort((a, b) => a.localeCompare(b));
 
   durCols = allKeys
     .filter(k => {
-      const seg = lastSeg(k);
-      return seg === durBase || seg.startsWith(durBase + '_');
+      const parts = k.split('/');
+      if (parts.length < 3) return false;
+      if (parts[0] !== 'active_work_group') return false;
+      if (parts[1] === 'grp_session' || parts[1] === 'outcomes_group') return false;
+      return parts[2].startsWith('duration_');
     })
     .sort((a, b) => a.localeCompare(b));
 
-  // Log to console so we can see exactly what was found
-  console.log('actBase:', actBase, '| durBase:', durBase);
-  console.log('actCols:', actCols);
-  console.log('durCols:', durCols);
-  console.log('All keys:', allKeys.filter(k => !k.startsWith('_')));
+  // KRA sub-cols live at active_work_group/kra_bucket (the combined select_multiple)
+  // Boolean sub-cols would be active_work_group/kra_bucket/grp_xxx
+  const kraField = 'active_work_group/kra_bucket';
+  kraSubCols = allKeys.filter(k => k.startsWith(kraField + '/'));
+
+  console.log('actCols:', actCols.length, actCols);
+  console.log('durCols:', durCols.length, durCols);
 
   // KRA boolean sub-cols: "kra_bucket/grp_session", "kra_bucket/grp_lab_operations_management" etc.
   kraSubCols = allKeys.filter(k => k.startsWith(kraQName + '/'));
@@ -1032,6 +1051,10 @@ async function fetchData() {
     // 2. Use schema to find exact internal names for activity & duration columns
     //    schema maps "Activity/Task Done" → "activity_task_done" (the API field name)
     schemaMap = schema;
+
+    // Fix kra field path — schema gives 'kra_bucket' but API uses 'active_work_group/kra_bucket'
+    const kraFullPath = allKeys.find(k => k.endsWith('/kra_bucket'));
+    if (kraFullPath) fieldMap.kra = kraFullPath;
 
     // 3. Transform: build activitiesTable and kraTable (mirrors Power Query)
     transformData();
