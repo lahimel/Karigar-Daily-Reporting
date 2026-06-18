@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Daily Report — Karigar</title>
+<title>Daily Report - Karigar</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -210,7 +210,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
     <p>Select your name to view your personal dashboard</p>
     <div class="fg">
       <label>Your Name</label>
-      <select id="nameSelect"><option value="">— Select name —</option></select>
+      <select id="nameSelect"><option value="">- Select name -</option></select>
     </div>
     <button class="btn-login" id="loginBtn" onclick="doLogin()" disabled>View My Dashboard →</button>
     <div class="lerr" id="lerr"></div>
@@ -236,37 +236,37 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
     <button class="btn btn-out" style="font-size:12px;padding:6px 11px" onclick="resetFilters()">Reset</button>
   </div>
 
-  <!-- KPI Cards — matching Power BI labels exactly -->
+  <!-- KPI Cards - matching Power BI labels exactly -->
   <div class="slbl">Overview</div>
   <div class="kpig">
     <div class="kc" style="border-top-color:#4F46E5">
       <div class="klab">Total Submissions</div>
-      <div class="kval" id="k0">—</div>
+      <div class="kval" id="k0">-</div>
       <div class="ksub" id="k0s"></div>
     </div>
     <div class="kc" style="border-top-color:#0EA5E9">
       <div class="klab">Lab/Field Reports</div>
-      <div class="kval" id="k1">—</div>
+      <div class="kval" id="k1">-</div>
       
     </div>
     <div class="kc" style="border-top-color:#0D9488">
       <div class="klab">Total Sessions</div>
-      <div class="kval" id="k2">—</div>
+      <div class="kval" id="k2">-</div>
       
     </div>
     <div class="kc" style="border-top-color:#16A34A">
       <div class="klab">Count of Course(s)</div>
-      <div class="kval" id="k3">—</div>
+      <div class="kval" id="k3">-</div>
       
     </div>
     <div class="kc" style="border-top-color:#D97706">
       <div class="klab">KRA Activities</div>
-      <div class="kval" id="k4">—</div>
+      <div class="kval" id="k4">-</div>
       
     </div>
     <div class="kc" style="border-top-color:#7C3AED">
       <div class="klab">Reported Hours</div>
-      <div class="kval" id="k5">—</div>
+      <div class="kval" id="k5">-</div>
       
     </div>
   </div>
@@ -353,7 +353,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
     </div>
     <div class="cfgb" id="cfgB">
       <p style="font-size:11px;color:var(--muted);margin-top:8px">Detected fields from API:</p>
-      <code id="cfgFields">—</code>
+      <code id="cfgFields">-</code>
       <div class="cfgg" id="cfgGrid"></div>
       <button class="btn btn-teal" style="margin-top:10px;font-size:12px" onclick="saveCfg()">✓ Apply</button>
     </div>
@@ -372,7 +372,7 @@ const SERVER = 'https://eu.kobotoolbox.org';
 const TOKEN  = 'be8d9189ac085ed0345b12ee0ae622d4e93b3ba0';
 const UID    = 'aJeu3J4hsaeFAETZpKuXzV';
 
-// KRA readable labels — uses actual internal names from schema (grp_ prefix)
+// KRA readable labels - uses actual internal names from schema (grp_ prefix)
 const KRA_LABELS = {
   grp_session:                              'Session & Program Execution',
   grp_lab_operations_management:            'Lab Operations & Management',
@@ -442,13 +442,13 @@ function parseD(v) {
 }
 function fmtDate(v) {
   const d = parseD(v);
-  if (!d) return String(v || '—').slice(0, 10);
+  if (!d) return String(v || '-').slice(0, 10);
   const [yr, mo, dy] = d.split('-');
   const M = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   return `${parseInt(dy)} ${M[parseInt(mo)-1]} ${yr}`;
 }
 function fmtHrs(mins) {
-  if (mins == null || isNaN(mins)) return '—';
+  if (mins == null || isNaN(mins)) return '-';
   return (mins / 60).toFixed(2);
 }
 function wtColor(wt) {
@@ -461,7 +461,7 @@ function wtBadge(wt) {
   return `<span class="badge" style="background:${c}18;color:${c};border:1px solid ${c}30">${esc(wt||'')}</span>`;
 }
 
-// ── Fetch — JSON API + form schema for exact field names ─────────
+// ── Fetch - JSON API + form schema for exact field names ─────────
 // Step 1: fetch the form schema to map labels → internal field names
 // Step 2: fetch all submission data from the JSON API
 // This avoids guessing internal names like "activity_task_done_001"
@@ -495,7 +495,7 @@ async function fetchAllPages() {
     const res = await fetch(PROXY + encodeURIComponent(url), {
       headers: { 'Authorization': `Token ${TOKEN}`, 'x-requested-with': 'XMLHttpRequest' }
     });
-    if (!res.ok) throw new Error(`API error ${res.status} — check token / asset UID`);
+    if (!res.ok) throw new Error(`API error ${res.status} - check token / asset UID`);
     const data = await res.json();
     results = results.concat(data.results || []);
     url = data.next || null;
@@ -518,7 +518,7 @@ const CANDS = {
 function detectFields() {
   const fm = {};
 
-  // ── Step 1: use schemaMap (label → exact internal name) — most reliable ──
+  // ── Step 1: use schemaMap (label → exact internal name) - most reliable ──
   const labelLookup = {
     name:        'Staff Name',
     date:        'Date',
@@ -707,8 +707,8 @@ function buildUserMap() {
 function fillDropdown() {
   const sel = document.getElementById('nameSelect');
   const names = Object.keys(userMap).sort();
-  if (!names.length) { sel.innerHTML = '<option value="">No names found — check ⚙ Field Config</option>'; return; }
-  sel.innerHTML = '<option value="">— Select name —</option>' +
+  if (!names.length) { sel.innerHTML = '<option value="">No names found - check ⚙ Field Config</option>'; return; }
+  sel.innerHTML = '<option value="">- Select name -</option>' +
     names.map(n => `<option value="${esc(n)}">${esc(n)} (${userMap[n].length} day${userMap[n].length !== 1 ? 's' : ''})</option>`).join('');
   document.getElementById('loginBtn').disabled = false;
 }
@@ -758,7 +758,7 @@ function fillWTFilter() {
   sel.innerHTML = '<option value="">All Types</option>' + types.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join('');
 }
 
-// ── Filtering — applied to all three tables ───────────────
+// ── Filtering - applied to all three tables ───────────────
 function getFiltered() {
   const from = document.getElementById('dfrom').value;
   const to   = document.getElementById('dto').value;
@@ -813,17 +813,17 @@ function renderKPIs(records, activities, kra) {
   // Total Sessions = SUM('Karigar - Daily Reporting'[Number of Sessions])
   let ses = 0;
   records.forEach(r => { const v = parseFloat(gv(r, fieldMap.sessions)); if (!isNaN(v) && v > 0) ses += v; });
-  set('k2', ses || '—');
+  set('k2', ses || '-');
 
   // Count of Course(s) = COUNTA of non-blank Course(s)
-  set('k3', records.filter(r => String(gv(r, fieldMap.courses) || '').trim()).length || '—');
+  set('k3', records.filter(r => String(gv(r, fieldMap.courses) || '').trim()).length || '-');
 
-  // KRA Activities = COUNTROWS(KRA) — total unpivoted KRA rows
-  set('k4', kra.length || '—');
+  // KRA Activities = COUNTROWS(KRA) - total unpivoted KRA rows
+  set('k4', kra.length || '-');
 
-  // Reported Hours = DIVIDE(SUM(Activities[Duration > 0]), 60)  — mirrors DAX Reported Minutes
+  // Reported Hours = DIVIDE(SUM(Activities[Duration > 0]), 60)  - mirrors DAX Reported Minutes
   const totalM = activities.reduce((s, a) => s + (a.mins !== null && a.mins > 0 ? a.mins : 0), 0);
-  set('k5', totalM > 0 ? fmtHrs(totalM) : '—');
+  set('k5', totalM > 0 ? fmtHrs(totalM) : '-');
 }
 
 // ── Charts ────────────────────────────────────────────────
@@ -902,12 +902,12 @@ function renderTables(records, activities) {
     .sort((a, b) => parseD(String(gv(b, fieldMap.date)||'')).localeCompare(parseD(String(gv(a, fieldMap.date)||''))));
   // Exclude activities from records where Session & Program Execution is a KRA bucket
   // (those days are already captured in the Sessions & Courses table)
-  // Show ALL activities — grp_session has no activity_others column anyway
+  // Show ALL activities - grp_session has no activity_others column anyway
   // (session group only has num_sessions + course, captured in Sessions & Courses table)
   const sortedAct = [...activities]
     .sort((a, b) => parseD(b.date).localeCompare(parseD(a.date)));
 
-  // ── Sessions & Courses — columns matching Power BI exactly ──
+  // ── Sessions & Courses - columns matching Power BI exactly ──
   // Date | Staff Name | Course(s) | Other Course Name | Select Lab | Total Submissions | Active Work Days | Total Sessions
   const sb = document.getElementById('tSC');
   set('scCnt', sortedRec.length + ' rows');
@@ -915,9 +915,9 @@ function renderTables(records, activities) {
   const scRows = sortedRec.map(r => {
     const dt    = fmtDate(String(gv(r, fieldMap.date) || ''));
     const staff = currentUser;
-    const crs   = String(gv(r, fieldMap.courses)     || '—').replace(/_/g, ' ');
+    const crs   = String(gv(r, fieldMap.courses)     || '-').replace(/_/g, ' ');
     const other = String(gv(r, fieldMap.otherCourse) || '');
-    const lab   = String(gv(r, fieldMap.lab)         || '—');
+    const lab   = String(gv(r, fieldMap.lab)         || '-');
     const wt    = String(gv(r, fieldMap.workType)    || '').toLowerCase();
     const sesV  = parseFloat(gv(r, fieldMap.sessions));
     const ses   = !isNaN(sesV) && sesV > 0 ? sesV : 0;
@@ -935,11 +935,11 @@ function renderTables(records, activities) {
       <td style="text-align:right">${ses || ''}</td>
     </tr>`;
   });
-  // Total row — sums all three numeric columns
+  // Total row - sums all three numeric columns
   const scTotal = sortedRec.length
     ? `<tr style="font-weight:700;border-top:2px solid var(--b2)">
         <td colspan="3" style="padding:8px 12px">Total</td>
-        <td style="text-align:right;padding:8px 12px">${sumSessions || '—'}</td>
+        <td style="text-align:right;padding:8px 12px">${sumSessions || '-'}</td>
        </tr>` : '';
   sb.innerHTML = sortedRec.length
     ? scRows.join('') + scTotal
@@ -968,7 +968,7 @@ function renderTables(records, activities) {
   ab.innerHTML = actRows.length ? actRows.join('') + actTotal : `<tr><td colspan="4" class="empty">No activities found</td></tr>`;
 }
 
-// ── Excel download — 4 sheets matching Power BI tables ────
+// ── Excel download - 4 sheets matching Power BI tables ────
 function doDownload() {
   const { records, activities, kra } = getFiltered();
   if (!records.length) { alert('No data for selected filters.'); return; }
@@ -980,7 +980,7 @@ function doDownload() {
 
     // Summary
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([
-      ['Karigar Daily Report — ' + currentUser], [''],
+      ['Karigar Daily Report - ' + currentUser], [''],
       ['From', document.getElementById('dfrom').value],
       ['To',   document.getElementById('dto').value],
       ['Generated', new Date().toLocaleString()], [''],
@@ -1006,7 +1006,7 @@ function doDownload() {
       }))
     ), 'Sessions & Courses');
 
-    // Activities (expanded — one row per activity)
+    // Activities (expanded - one row per activity)
     const actSorted = [...activities].sort((a,b) => parseD(b.date).localeCompare(parseD(a.date)));
     if (actSorted.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(
       actSorted.map(a => ({
@@ -1019,7 +1019,7 @@ function doDownload() {
       }))
     ), 'Activities');
 
-    // KRA (expanded — one row per KRA bucket)
+    // KRA (expanded - one row per KRA bucket)
     const kraSorted = [...kra].sort((a,b) => parseD(b.date).localeCompare(parseD(a.date)));
     if (kraSorted.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(
       kraSorted.map(r => ({
@@ -1040,8 +1040,8 @@ function setupCfg() {
   document.getElementById('cfgFields').textContent = vis.join(', ');
 
   const actInfo = actCols.length ? `✓ ${actCols.length} cols: ${actCols.join(', ')}` : '✗ None detected';
-  const durInfo = durCols.length ? `✓ ${durCols.length} cols: ${durCols.join(', ')}` : '✗ None detected — hours will show —';
-  const kraInfo = kraSubCols.length ? `✓ ${kraSubCols.length} cols found` : '✗ None — using combined KRA field';
+  const durInfo = durCols.length ? `✓ ${durCols.length} cols: ${durCols.join(', ')}` : '✗ None detected - hours will show -';
+  const kraInfo = kraSubCols.length ? `✓ ${kraSubCols.length} cols found` : '✗ None - using combined KRA field';
 
   document.getElementById('cfgGrid').innerHTML =
     `<div class="cfgf" style="grid-column:1/-1">
@@ -1061,7 +1061,7 @@ function setupCfg() {
       sessions:'Number of Sessions', courses:'Course(s)', otherCourse:'Other Course Name', kra:'KRA Combined Field'
     }).map(([t, l]) =>
       `<div class="cfgf"><label>${l}</label>
-       <select id="cfg_${t}"><option value="">— not set —</option>
+       <select id="cfg_${t}"><option value="">- not set -</option>
        ${allKeys.map(k => `<option value="${esc(k)}"${fieldMap[t]===k?' selected':''}>${esc(k)}</option>`).join('')}
        </select></div>`
     ).join('');
@@ -1112,7 +1112,7 @@ async function fetchData() {
     //    schema maps "Activity/Task Done" → "activity_task_done" (the API field name)
     schemaMap = schema;
 
-    // Fix kra field path — schema gives 'kra_bucket' but API uses 'active_work_group/kra_bucket'
+    // Fix kra field path - schema gives 'kra_bucket' but API uses 'active_work_group/kra_bucket'
     const kraFullPath = allKeys.find(k => k.endsWith('/kra_bucket'));
     if (kraFullPath) fieldMap.kra = kraFullPath;
 
@@ -1130,7 +1130,7 @@ async function fetchData() {
     document.getElementById('navSub').textContent = 'Personal Dashboard';
 
     if (!rawData.length) {
-      document.getElementById('bannerArea').innerHTML = `<div class="banner banner-ok">Connected — no submissions found yet.</div>`;
+      document.getElementById('bannerArea').innerHTML = `<div class="banner banner-ok">Connected - no submissions found yet.</div>`;
     }
   } catch(e) {
     document.getElementById('bannerArea').innerHTML = `<div class="banner banner-err"><strong>Failed to load:</strong> ${e.message}</div>`;
