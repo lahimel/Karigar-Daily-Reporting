@@ -125,6 +125,51 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 /* responsive */
 @media(max-width:960px){.kpig{grid-template-columns:repeat(3,1fr)}.cr{grid-template-columns:1fr}}
 @media(max-width:680px){.tr2{grid-template-columns:1fr}.kpig{grid-template-columns:repeat(2,1fr)}.ffields{flex-direction:column}}
+
+/* ── Print / PDF ─────────────────────────────────────────── */
+@media print {
+  @page { size: A4 landscape; margin: 10mm; }
+
+  /* Hide interactive elements */
+  .nav-r, .fbar, .cfgp, .footer { display: none !important; }
+
+  /* Reset for print */
+  body { background: #fff !important; font-size: 11px; }
+  .nav { background: #0F172A !important; -webkit-print-color-adjust: exact;
+         print-color-adjust: exact; position: relative; padding: 8px 16px;
+         height: auto; box-shadow: none; }
+  .nav-t { font-size: 13px; }
+  .page { padding: 8px 0 0; max-width: 100%; }
+
+  /* KPI grid: single row of 6 */
+  .kpig { grid-template-columns: repeat(6,1fr) !important; gap: 6px; margin-bottom: 10px; }
+  .kc   { padding: 10px 8px; border-top-width: 2px; box-shadow: none; border: 1px solid #E2E8F0; }
+  .kval { font-size: 20px; } .klab { font-size: 8px; } .ksub { font-size: 9px; }
+
+  /* Charts */
+  .cr   { grid-template-columns: 4fr 6fr !important; gap: 8px; margin-bottom: 10px; }
+  .cc   { padding: 10px; box-shadow: none; border: 1px solid #E2E8F0; }
+  .cc-h { font-size: 10px; margin-bottom: 8px; }
+  .cw   { height: 155px !important; }
+  #kraWrap { height: 155px !important; }
+
+  /* Tables */
+  .tr2  { grid-template-columns: 1fr 1fr !important; gap: 8px; margin-bottom: 8px; }
+  .tc   { box-shadow: none; border: 1px solid #E2E8F0; }
+  .tch  { padding: 8px 12px; }
+  .tct  { font-size: 11px; }
+  .tw   { max-height: none !important; overflow: visible !important; }
+  .dt th, .dt td { padding: 5px 8px; font-size: 10px; }
+
+  /* Section labels */
+  .slbl { font-size: 9px; margin-bottom: 6px; }
+
+  /* Avoid breaks inside key sections */
+  .kpig, .cr, .tr2 { break-inside: avoid; }
+
+  /* Preserve colours */
+  .badge, .kc { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
 </style>
 </head>
 <body>
@@ -145,6 +190,10 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
     <button class="btn btn-nav" id="logoutBtn" style="display:none" onclick="doLogout()">
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 2H3a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3M11 11l3-3-3-3M14 8H6"/></svg>
       Logout
+    </button>
+    <button class="btn btn-nav" id="pdfBtn" onclick="printPDF()" style="display:none">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 1h6l3 3v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1z"/><path d="M9 1v4h3M5 9h6M5 11.5h4"/></svg>
+      PDF
     </button>
     <button class="btn btn-teal" id="refreshBtn" onclick="fetchData()">
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M13.5 8A5.5 5.5 0 1 1 8 2.5c1.8 0 3.4.87 4.4 2.2M13.5 2v3h-3"/></svg>
@@ -669,6 +718,7 @@ function doLogin() {
   document.getElementById('userChip').textContent = '👤 ' + name;
   document.getElementById('userChip').style.display = 'inline-block';
   document.getElementById('logoutBtn').style.display = 'inline-flex';
+  document.getElementById('pdfBtn').style.display = 'inline-flex';
   document.getElementById('navSub').textContent = 'Viewing: ' + name;
   setDateDefaults();
   fillWTFilter();
@@ -682,6 +732,7 @@ function doLogout() {
   currentUser = null; userData = [];
   document.getElementById('userChip').style.display = 'none';
   document.getElementById('logoutBtn').style.display = 'none';
+  document.getElementById('pdfBtn').style.display = 'none';
   document.getElementById('navSub').textContent = 'Personal Dashboard';
   document.getElementById('dash').style.display = 'none';
   document.getElementById('loginWrap').style.display = 'flex';
@@ -736,6 +787,11 @@ function applyFilters() {
   renderKPIs(records, activities, kra);
   renderCharts(records, kra);
   renderTables(records, activities);
+  // Stamp nav for print header
+  const from = document.getElementById('dfrom').value || '';
+  const to   = document.getElementById('dto').value   || '';
+  document.querySelector('.nav').setAttribute('data-user', currentUser || '');
+  document.querySelector('.nav').setAttribute('data-range', from && to ? from + ' to ' + to : '');
 }
 
 // ── KPIs ──────────────────────────────────────────────────
@@ -854,7 +910,7 @@ function renderTables(records, activities) {
   const scRows = sortedRec.map(r => {
     const dt    = fmtDate(String(gv(r, fieldMap.date) || ''));
     const staff = currentUser;
-    const crs   = String(gv(r, fieldMap.courses)     || '—');
+    const crs   = String(gv(r, fieldMap.courses)     || '—').replace(/_/g, ' ');
     const other = String(gv(r, fieldMap.otherCourse) || '');
     const lab   = String(gv(r, fieldMap.lab)         || '—');
     const wt    = String(gv(r, fieldMap.workType)    || '').toLowerCase();
@@ -1081,6 +1137,10 @@ async function fetchData() {
     document.getElementById('loadArea').innerHTML = '';
     document.getElementById('refreshBtn').disabled = false;
   }
+}
+
+function printPDF() {
+  window.print();
 }
 
 document.getElementById('nameSelect').addEventListener('change', function() {
