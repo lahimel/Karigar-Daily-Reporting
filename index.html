@@ -6,6 +6,8 @@
 <title>Daily Report — Karigar</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -1139,8 +1141,63 @@ async function fetchData() {
   }
 }
 
-function printPDF() {
-  window.print();
+async function printPDF() {
+  const btn = document.getElementById('pdfBtn');
+  const origHTML = btn.innerHTML;
+  btn.innerHTML = '⏳ Building…';
+  btn.disabled = true;
+
+  // Hide elements that shouldn't appear in the PDF
+  const toHide = ['.nav-r', '.fbar', '.cfgp', '.footer'];
+  const hidden = [];
+  toHide.forEach(sel => {
+    document.querySelectorAll(sel).forEach(el => {
+      hidden.push({ el, disp: el.style.display });
+      el.style.display = 'none';
+    });
+  });
+
+  // Temporarily compact the layout for capture
+  const page  = document.querySelector('.page');
+  const dash  = document.getElementById('dash');
+  const prevPad = page.style.padding;
+  page.style.padding = '10px 14px 16px';
+
+  try {
+    const canvas = await html2canvas(dash, {
+      scale: 1.8,
+      useCORS: true,
+      logging: false,
+      backgroundColor: '#F1F5F9',
+      windowWidth: dash.scrollWidth,
+      windowHeight: dash.scrollHeight,
+    });
+
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const pw = pdf.internal.pageSize.getWidth();   // 297 mm
+    const ph = pdf.internal.pageSize.getHeight();  // 210 mm
+
+    const imgW = canvas.width;
+    const imgH = canvas.height;
+    const ratio = Math.min(pw / imgW, ph / imgH);
+
+    // Centre on the page
+    const x = (pw - imgW * ratio) / 2;
+    const y = (ph - imgH * ratio) / 2;
+
+    pdf.addImage(canvas.toDataURL('image/jpeg', 0.93), 'JPEG', x, y, imgW * ratio, imgH * ratio);
+
+    const fname = `${currentUser.replace(/\s+/g, '_')}_DailyReport_${new Date().toISOString().slice(0, 10)}.pdf`;
+    pdf.save(fname);
+  } catch(e) {
+    alert('PDF generation failed: ' + e.message);
+  } finally {
+    hidden.forEach(({ el, disp }) => el.style.display = disp);
+    page.style.padding = prevPad;
+    btn.innerHTML = origHTML;
+    btn.disabled = false;
+  }
 }
 
 document.getElementById('nameSelect').addEventListener('change', function() {
