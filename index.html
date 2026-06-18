@@ -243,6 +243,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
     <button class="btn btn-out" style="font-size:12px;padding:6px 11px" onclick="resetFilters()">Reset</button>
   </div>
 
+  <!-- KPI Cards — matching Power BI labels exactly -->
   <div class="slbl">Overview</div>
   <div class="kpig">
     <div class="kc" style="border-top-color:#4F46E5">
@@ -253,22 +254,27 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
     <div class="kc" style="border-top-color:#0EA5E9">
       <div class="klab">Lab/Field Reports</div>
       <div class="kval" id="k1">—</div>
+      <div class="ksub">Working Type: Lab or Field</div>
     </div>
     <div class="kc" style="border-top-color:#0D9488">
       <div class="klab">Total Sessions</div>
       <div class="kval" id="k2">—</div>
+      <div class="ksub">SUM of No. of Sessions</div>
     </div>
     <div class="kc" style="border-top-color:#16A34A">
       <div class="klab">Count of Course(s)</div>
       <div class="kval" id="k3">—</div>
+      <div class="ksub">Non-blank Course entries</div>
     </div>
     <div class="kc" style="border-top-color:#D97706">
       <div class="klab">KRA Activities</div>
       <div class="kval" id="k4">—</div>
+      <div class="ksub">Unpivoted KRA rows</div>
     </div>
     <div class="kc" style="border-top-color:#7C3AED">
       <div class="klab">Reported Hours</div>
       <div class="kval" id="k5">—</div>
+      <div class="ksub">SUM(Duration) ÷ 60</div>
     </div>
   </div>
 
@@ -399,11 +405,14 @@ const KRA_LABELS = {
 };
 
 const WT_COLS = {
-  lab:'#4F46E5', field:'#16A34A', travel:'#D97706',
-  compoff:'#7C3AED', 'comp off':'#7C3AED', leave:'#EF4444', other:'#94A3B8'
+  lab:'#3B4FE4', field:'#0FA880', travel:'#E88C30',
+  compoff:'#9747FF', 'comp off':'#9747FF', leave:'#E84545', other:'#94A3B8'
 };
-const BAR_PAL = ['#4F46E5','#0D9488','#16A34A','#D97706','#E11D48','#7C3AED',
-                 '#0EA5E9','#F97316','#84CC16','#EC4899','#3B82F6','#F59E0B'];
+// Indigo dark→light: darkest = highest KRA count, lightest = lowest
+const BAR_PAL = [
+  '#1e1b4b','#2d2a6b','#3730a3','#4338ca','#4f46e5',
+  '#6366f1','#818cf8','#a5b4fc','#c7d2fe','#dde4ff','#e8ecff','#f0f3ff'
+];
 
 // ── State ─────────────────────────────────────────────────
 let schemaMap       = {};   // label → internal field name (from form schema)
@@ -450,7 +459,7 @@ function wtColor(wt) {
 }
 function wtBadge(wt) {
   const c = wtColor(wt);
-  return `<span class="badge" style="background:${c}18;color:${c};border:1px solid ${c}30">${esc(wt||'—')}</span>`;
+  return `<span class="badge" style="background:${c}18;color:${c};border:1px solid ${c}30">${esc(wt||'')}</span>`;
 }
 
 // ── Fetch — JSON API + form schema for exact field names ─────────
@@ -860,16 +869,17 @@ function renderCharts(records, kra) {
 
   if (CHS.bar) CHS.bar.destroy();
   if (bD.length) {
+    const barColors = bD.map((_, i) => BAR_PAL[Math.min(i, BAR_PAL.length - 1)]);
     CHS.bar = new Chart(document.getElementById('barC').getContext('2d'), {
       type: 'bar',
-      data: { labels: bL, datasets: [{ data: bD, backgroundColor: '#4F46E5', borderRadius: 3, barThickness: 18 }] },
+      data: { labels: bL, datasets: [{ data: bD, backgroundColor: barColors, borderRadius: 3, barThickness: 18 }] },
       options: {
         indexAxis: 'y', responsive: true, maintainAspectRatio: false,
         layout: { padding: { right: 32 } },
         plugins: {
           legend: { display: false },
           tooltip: { callbacks: { title: items => [bL[items[0].dataIndex]] } },
-          datalabels: { anchor: 'end', align: 'end', formatter: v => v, color: '#475569', font: { weight: '700', size: 11 } }
+          datalabels: { anchor: 'end', align: 'end', formatter: v => v, color: (ctx) => { const i=ctx.dataIndex; return i<5?'#fff':'#475569'; }, font: { weight: '700', size: 11 } }
         },
         scales: {
           x: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 10 } }, grid: { color: '#F1F5F9' }, title: { display: true, text: 'KRA Count', font: { size: 10 }, color: '#94A3B8' } },
@@ -919,12 +929,11 @@ function renderTables(records, activities) {
     sumSubmissions += totalSub;
     sumActiveDays  += activeDay;
     sumSessions    += ses;
-    const dash = '<span style="color:var(--faint)">—</span>';
     return `<tr>
       <td style="white-space:nowrap">${esc(dt)}</td>
       <td>${esc(crs)}</td>
-      <td>${other ? esc(other) : dash}</td>
-      <td style="text-align:right">${ses || dash}</td>
+      <td>${esc(other)}</td>
+      <td style="text-align:right">${ses || ''}</td>
     </tr>`;
   });
   // Total row — sums all three numeric columns
@@ -944,7 +953,7 @@ function renderTables(records, activities) {
   let totalMinsAct = 0;
   const actRows = sortedAct.map(a => {
     if (a.mins !== null) totalMinsAct += a.mins;
-    const hrs = a.hours !== null ? (a.hours).toFixed(2) : '—';
+    const hrs = a.hours !== null ? (a.hours).toFixed(2) : '';
     return `<tr>
       <td style="white-space:nowrap">${esc(fmtDate(a.date))}</td>
       <td>${wtBadge(a.workingType)}</td>
