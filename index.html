@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Daily Report — Karigar</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
@@ -164,8 +164,86 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 .footer{text-align:center;font-size:10.5px;color:var(--faint);padding:18px;border-top:1px solid var(--b);margin-top:8px}
 
 /* ── Responsive ──────────────────────────────────────────── */
-@media(max-width:960px){.kpig{grid-template-columns:repeat(3,1fr)}.cr{grid-template-columns:1fr}}
-@media(max-width:680px){.tr2{grid-template-columns:1fr}.kpig{grid-template-columns:repeat(2,1fr)}.ffields{flex-direction:column}}
+
+/* Table horizontal scroll on all sizes */
+.tw{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.dt{min-width:380px}
+
+/* Tablet: 960px */
+@media(max-width:960px){
+  .kpig{grid-template-columns:repeat(3,1fr)}
+  .cr{grid-template-columns:1fr}
+  .tr2{grid-template-columns:1fr}
+}
+
+/* Large mobile: 680px */
+@media(max-width:680px){
+  .nav{padding:0 16px;height:58px}
+  .nav-s{display:none}
+  .page{padding:16px 14px 60px}
+  .kpig{grid-template-columns:repeat(2,1fr);gap:10px}
+  .kc{padding:16px 13px}
+  .kval{font-size:28px}
+  .fbar{padding:12px 14px;gap:8px}
+  .ffields{flex-direction:column;gap:8px}
+  .ffields .fg{min-width:unset}
+  .cc{padding:16px 14px}
+  .tch{padding:12px 14px}
+  .dt td,.dt th{padding:9px 12px}
+  #dlBar{flex-wrap:wrap;justify-content:center}
+}
+
+/* Small mobile: 480px */
+@media(max-width:480px){
+  .nav{padding:0 12px;height:54px}
+  .nav-t{font-size:13px}
+  .chip{max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;padding:5px 10px}
+  .btn-nav span{display:none} /* icon only for logout */
+  .btn-nav svg{margin:0}
+  .btn-nav{padding:7px 9px}
+  .pill span:not(.dot){display:none}
+  .pill{padding:5px 7px}
+  .page{padding:12px 10px 60px}
+  .kpig{grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:16px}
+  .kc{padding:14px 11px;border-radius:12px}
+  .kval{font-size:26px;letter-spacing:-1px}
+  .klab{font-size:8px}
+  .ksub{font-size:9px}
+  .cr{gap:10px;margin-bottom:16px}
+  .cc{padding:14px 12px;border-radius:12px}
+  .cc-h{font-size:11px;margin-bottom:12px;padding-bottom:10px}
+  .cw{height:180px!important}
+  .tr2{gap:10px;margin-bottom:16px}
+  .tc{border-radius:12px}
+  .tch{padding:11px 14px}
+  .tct{font-size:11px}
+  .dt{min-width:340px}
+  .dt th{font-size:8px;padding:8px 11px;letter-spacing:.04em}
+  .dt td{padding:9px 11px;font-size:11px}
+  .slbl{font-size:9px;letter-spacing:.1em}
+  .fbar{border-radius:12px;padding:12px}
+  .fbar-lbl{font-size:9px}
+  .ffields .fg select,.ffields .fg input[type=date]{padding:8px 11px;font-size:13px;border-radius:8px}
+  .dl-btn{padding:9px 18px;font-size:12px;border-radius:9px}
+  #dlBar{flex-wrap:wrap;justify-content:stretch;gap:8px}
+  #dlBar .dl-btn{flex:1;justify-content:center}
+  .lcard{padding:32px 22px;border-radius:18px}
+  .lico{width:60px;height:60px;border-radius:16px}
+  .lcard h1{font-size:20px}
+  .lcard p{font-size:12px;margin-bottom:24px}
+  .fg select{padding:10px 12px;font-size:13px}
+  .btn-login{padding:12px;font-size:13px}
+  #chartFilterChip{flex-wrap:wrap}
+  .footer{font-size:10px;padding:14px}
+}
+
+/* Very small: 360px */
+@media(max-width:360px){
+  .kpig{grid-template-columns:repeat(2,1fr);gap:7px}
+  .kval{font-size:22px}
+  .page{padding:10px 8px 50px}
+  .nav-t{font-size:12px}
+}
 
 /* ── Print ───────────────────────────────────────────────── */
 @media print{
@@ -314,7 +392,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
   <div class="slbl">Breakdown</div>
   <div class="cr">
     <!-- Pie -->
-    <div class="cc">
+    <div class="cc" style="cursor:pointer">
       <div class="cc-h">
         <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="8" cy="8" r="6"/><path d="M8 2a6 6 0 0 1 6 6H8z"/></svg>
         Total Submissions by Working Type
@@ -322,7 +400,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
       <div class="cw" style="height:200px"><canvas id="pieC"></canvas></div>
     </div>
     <!-- Horizontal bar: KRA -->
-    <div class="cc">
+    <div class="cc" style="cursor:pointer">
       <div class="cc-h">
         <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M2 4h6M2 8h10M2 12h4"/></svg>
         KRA Distribution
@@ -943,7 +1021,9 @@ function renderCharts(records, kra) {
   const bEntries = Object.entries(kMap).sort((a, b) => b[1] - a[1]);
   const bL = bEntries.map(e => e[0]);
   const bD = bEntries.map(e => e[1]);
-  const barH = Math.max(160, bL.length * 30 + 40);
+  const isMobile = window.innerWidth < 480;
+  const barThick = isMobile ? 14 : 18;
+  const barH = Math.max(isMobile ? 140 : 160, bL.length * (isMobile ? 26 : 30) + 40);
   document.getElementById('kraWrap').style.height = barH + 'px';
 
   if (CHS.bar) CHS.bar.destroy();
@@ -951,7 +1031,7 @@ function renderCharts(records, kra) {
     const barColors = bD.map((_, i) => BAR_PAL[Math.min(i, BAR_PAL.length - 1)]);
     CHS.bar = new Chart(document.getElementById('barC').getContext('2d'), {
       type: 'bar',
-      data: { labels: bL, datasets: [{ data: bD, backgroundColor: barColors, borderRadius: 3, barThickness: 18 }] },
+      data: { labels: bL, datasets: [{ data: bD, backgroundColor: barColors, borderRadius: 3, barThickness: barThick }] },
       options: {
         indexAxis: 'y', responsive: true, maintainAspectRatio: false,
         layout: { padding: { right: 8 } },
