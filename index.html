@@ -719,6 +719,23 @@ function transformData() {
   console.log('durCols found:', durCols);
   console.log('kraSubCols found:', kraSubCols);
 
+  // Find the date field by scanning actual record values for YYYY-MM-DD
+  // This works even if fieldMap.date hasn't been updated yet when transformData() runs
+  let dateField = fieldMap.date;
+  const sampleRec = rawData.find(r => r[dateField] && !/T/.test(String(r[dateField])));
+  if (!sampleRec || /T/.test(String(sampleRec[dateField] || ''))) {
+    // fieldMap.date returns datetimes (submission time) — scan for the real date field
+    const pureDateKey = allKeys.find(k => {
+      if (k.startsWith('_')) return false;
+      return rawData.slice(0, 20).some(r => /^\d{4}-\d{2}-\d{2}$/.test(String(r[k] || '')));
+    });
+    if (pureDateKey) {
+      dateField = pureDateKey;
+      fieldMap.date = pureDateKey; // also update fieldMap so tables render correctly
+      console.log('transformData: date field corrected to', pureDateKey);
+    }
+  }
+
   activitiesTable = [];
   kraTable        = [];
 
@@ -728,7 +745,7 @@ function transformData() {
 
     const base = {
       staffName,
-      date:        String(gv(rec, fieldMap.date)        || ''),
+      date:        String(rec[dateField] || ''),
       lab:         String(gv(rec, fieldMap.lab)         || ''),
       workingType: String(gv(rec, fieldMap.workType)    || ''),
       courses:     String(gv(rec, fieldMap.courses)     || ''),
@@ -1233,13 +1250,36 @@ async function fetchData() {
     schemaMap = schema;
 
     // ── Explicit date field fix ──────────────────────────────
-    // Schema maps "Date" → "report_date" (user-entered report date)
-    // Force this over any _submission_time fallback
-    const schemaDateName = schemaMap['Date'];
+    // Strategy: find the key whose values are YYYY-MM-DD (pure date, not datetime)
+    // This is always the user-entered report date, not _submission_time (which is ISO datetime)
+    const schemaDateName = schemaMap['Date']; // e.g. 'report_date'
+
+    // Step 1: try schema name exact or with any group prefix
     if (schemaDateName) {
-      const datePath = allKeys.find(k => k === schemaDateName || k.endsWith('/' + schemaDateName));
+      const datePath = allKeys.find(k =>
+        k === schemaDateName ||
+        k.endsWith('/' + schemaDateName)
+      );
       if (datePath) fieldMap.date = datePath;
     }
+
+    // Step 2: if still _submission_time, scan values for a key with pure YYYY-MM-DD values
+    if (!fieldMap.date || fieldMap.date === '_submission_time') {
+      const sampleRecs = rawData.filter(r => r['_submission_time']).slice(0, 20);
+      const pureDateKey = allKeys.find(k => {
+        if (k.startsWith('_')) return false; // skip internal fields
+        // Must have at least one record with a pure YYYY-MM-DD value (no time component)
+        return sampleRecs.some(r => {
+          const v = String(r[k] || '');
+          return /^\d{4}-\d{2}-\d{2}$/.test(v);
+        });
+      });
+      if (pureDateKey) {
+        fieldMap.date = pureDateKey;
+        console.log('Date field found via value scan:', pureDateKey);
+      }
+    }
+    console.log('Final fieldMap.date:', fieldMap.date);
 
     // Fix kra field path — schema gives 'kra_bucket' but API uses 'active_work_group/kra_bucket'
     const kraFullPath = allKeys.find(k => k.endsWith('/kra_bucket'));
