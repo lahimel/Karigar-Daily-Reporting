@@ -954,7 +954,7 @@ function renderCharts(records, kra) {
       data: { labels: bL, datasets: [{ data: bD, backgroundColor: barColors, borderRadius: 3, barThickness: 18 }] },
       options: {
         indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-        layout: { padding: { right: 36 } },
+        layout: { padding: { right: 8 } },
         onClick: (evt, elements) => {
           if (!elements.length) { activeChartFilter = null; applyFilters(); return; }
           const kra = bL[elements[0].index];
@@ -968,7 +968,7 @@ function renderCharts(records, kra) {
         plugins: {
           legend: { display: false },
           tooltip: { callbacks: { title: items => [bL[items[0].dataIndex]] } },
-          datalabels: { anchor: 'end', align: 'end', formatter: v => v, color: (ctx) => { const i=ctx.dataIndex; return i<5?'#fff':'#475569'; }, font: { weight: '700', size: 11 } }
+          datalabels: { anchor: 'end', align: 'start', padding: 8, formatter: v => v, color: '#fff', font: { weight: '700', size: 11 }, textShadowBlur: 3, textShadowColor: 'rgba(0,0,0,.35)' }
         },
         scales: {
           x: { display: false },
