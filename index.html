@@ -334,14 +334,6 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 <div id="dash">
 <div class="page">
 
-  <!-- Welcome header -->
-  <div id="welcomeBar" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:16px">
-    <div>
-      <div id="welcomeName" style="font-size:22px;font-weight:800;color:var(--text);letter-spacing:-.4px;line-height:1.2"></div>
-      <div id="welcomeLab" style="font-size:13px;color:var(--muted);margin-top:3px;font-weight:500"></div>
-    </div>
-  </div>
-
   <!-- Filter bar -->
   <div class="fbar">
     <div class="fbar-lbl">
@@ -357,16 +349,19 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
   </div>
 
   <!-- KPI Cards — matching Power BI labels exactly -->
-  <!-- Download action bar -->
-  <div id="dlBar" style="display:none;justify-content:flex-end;gap:10px;margin-bottom:18px;align-items:center">
-    <button class="dl-btn" onclick="doDownload()">
-      <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 2v8M5 7l3 3 3-3M3 13h10"/></svg>
-      Excel
-    </button>
-    <button class="dl-btn dl-btn-pdf" id="pdfBtn" onclick="printPDF()" style="display:none">
-      <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 1h6l3 3v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1z"/><path d="M9 1v4h3M5 9h6M5 11.5h4"/></svg>
-      PDF
-    </button>
+  <!-- Name + Lab + Download buttons row -->
+  <div id="dlBar" style="display:none;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px;flex-wrap:wrap">
+    <div id="welcomeName" style="font-size:20px;font-weight:800;color:var(--text);letter-spacing:-.4px"></div>
+    <div style="display:flex;gap:10px;flex-shrink:0">
+      <button class="dl-btn" onclick="doDownload()">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 2v8M5 7l3 3 3-3M3 13h10"/></svg>
+        Excel
+      </button>
+      <button class="dl-btn dl-btn-pdf" id="pdfBtn" onclick="printPDF()" style="display:none">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 1h6l3 3v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1z"/><path d="M9 1v4h3M5 9h6M5 11.5h4"/></svg>
+        PDF
+      </button>
+    </div>
   </div>
 
   <div class="slbl">Overview</div>
@@ -861,6 +856,9 @@ function doLogin() {
   const pb = document.getElementById('pdfBtn'); if(pb) pb.style.display = 'inline-flex';
   const dlb = document.getElementById('dlBar'); if(dlb) dlb.style.display = 'flex';
   document.getElementById('navSub').textContent = 'Viewing: ' + name;
+  // "Kunal Garge — Food Lab"
+  const labVal = (userMap[name] || []).map(r => String(r[fieldMap.lab] || '').trim()).find(v => v) || '';
+  document.getElementById('welcomeName').textContent = labVal ? name + ' — ' + labVal : name;
   setDateDefaults();
   fillWTFilter();
   applyFilters();
@@ -875,7 +873,6 @@ function doLogout() {
   const dlb2 = document.getElementById('dlBar'); if(dlb2) dlb2.style.display = 'none';
   document.getElementById('navSub').textContent = 'Personal Dashboard';
   document.getElementById('welcomeName').textContent = '';
-  document.getElementById('welcomeLab').textContent = '';
   document.getElementById('dash').style.display = 'none';
   document.getElementById('loginWrap').style.display = 'flex';
   if (CHS.pie) { CHS.pie.destroy(); delete CHS.pie; }
