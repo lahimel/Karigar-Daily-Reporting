@@ -334,6 +334,14 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 <div id="dash">
 <div class="page">
 
+  <!-- Welcome header -->
+  <div id="welcomeBar" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:16px">
+    <div>
+      <div id="welcomeName" style="font-size:22px;font-weight:800;color:var(--text);letter-spacing:-.4px;line-height:1.2"></div>
+      <div id="welcomeLab" style="font-size:13px;color:var(--muted);margin-top:3px;font-weight:500"></div>
+    </div>
+  </div>
+
   <!-- Filter bar -->
   <div class="fbar">
     <div class="fbar-lbl">
@@ -849,8 +857,6 @@ function doLogin() {
   if (!userMap[name]) { lerr.textContent = 'No data found for this code. Contact admin.'; lerr.style.display = 'block'; return; }
   currentUser = name;
   userData = userMap[name] || [];
-  document.getElementById('userChip').textContent = '👤 ' + name;
-  document.getElementById('userChip').style.display = 'inline-block';
   document.getElementById('logoutBtn').style.display = 'inline-flex';
   const pb = document.getElementById('pdfBtn'); if(pb) pb.style.display = 'inline-flex';
   const dlb = document.getElementById('dlBar'); if(dlb) dlb.style.display = 'flex';
@@ -864,11 +870,12 @@ function doLogin() {
 
 function doLogout() {
   currentUser = null; userData = [];
-  document.getElementById('userChip').style.display = 'none';
   document.getElementById('logoutBtn').style.display = 'none';
   const pb2 = document.getElementById('pdfBtn'); if(pb2) pb2.style.display = 'none';
   const dlb2 = document.getElementById('dlBar'); if(dlb2) dlb2.style.display = 'none';
   document.getElementById('navSub').textContent = 'Personal Dashboard';
+  document.getElementById('welcomeName').textContent = '';
+  document.getElementById('welcomeLab').textContent = '';
   document.getElementById('dash').style.display = 'none';
   document.getElementById('loginWrap').style.display = 'flex';
   if (CHS.pie) { CHS.pie.destroy(); delete CHS.pie; }
