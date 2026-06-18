@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Daily Report — Karigar</title>
+<title>Daily Report - Karigar</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -326,7 +326,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
     </div>
     <button class="btn-login" id="loginBtn" onclick="doLogin()" disabled>View My Dashboard →</button>
     <div class="lerr" id="lerr"></div>
-    <p class="lnote">Your code is unique to you — contact admin if you forgot it</p>
+    <p class="lnote">Your code is unique to you - contact admin if you forgot it</p>
   </div>
 </div>
 
@@ -349,7 +349,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
     <button class="btn btn-out" style="font-size:12px;padding:6px 11px" onclick="resetFilters()">Reset</button>
   </div>
 
-  <!-- KPI Cards — matching Power BI labels exactly -->
+  <!-- KPI Cards - matching Power BI labels exactly -->
   <!-- Name + Lab + Download buttons row -->
   <div id="dlBar" style="display:none;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px;flex-wrap:wrap">
     <div id="welcomeName" style="font-size:20px;font-weight:800;color:#2C1507;letter-spacing:-.4px"></div>
@@ -369,32 +369,32 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
   <div class="kpig">
     <div class="kc" style="border-top-color:#4F46E5">
       <div class="klab">Total Submissions</div>
-      <div class="kval" id="k0" style="color:#5B4BE8">—</div>
+      <div class="kval" id="k0" style="color:#5B4BE8">-</div>
       <div class="ksub" id="k0s"></div>
     </div>
     <div class="kc" style="border-top-color:#0EA5E9">
       <div class="klab">Lab/Field Reports</div>
-      <div class="kval" id="k1" style="color:#0EA5E9">—</div>
+      <div class="kval" id="k1" style="color:#0EA5E9">-</div>
       
     </div>
     <div class="kc" style="border-top-color:#0D9488">
       <div class="klab">Total Sessions</div>
-      <div class="kval" id="k2" style="color:#0D9488">—</div>
+      <div class="kval" id="k2" style="color:#0D9488">-</div>
       
     </div>
     <div class="kc" style="border-top-color:#16A34A">
       <div class="klab">Count of Course(s)</div>
-      <div class="kval" id="k3" style="color:#16A34A">—</div>
+      <div class="kval" id="k3" style="color:#16A34A">-</div>
       
     </div>
     <div class="kc" style="border-top-color:#D97706">
       <div class="klab">KRA Activities</div>
-      <div class="kval" id="k4" style="color:#D97706">—</div>
+      <div class="kval" id="k4" style="color:#D97706">-</div>
       
     </div>
     <div class="kc" style="border-top-color:#7C3AED">
       <div class="klab">Reported Hours</div>
-      <div class="kval" id="k5" style="color:#7C3AED">—</div>
+      <div class="kval" id="k5" style="color:#7C3AED">-</div>
       
     </div>
   </div>
@@ -484,7 +484,7 @@ const SERVER = 'https://eu.kobotoolbox.org';
 const TOKEN  = 'be8d9189ac085ed0345b12ee0ae622d4e93b3ba0';
 const UID    = 'aJeu3J4hsaeFAETZpKuXzV';
 
-// KRA readable labels — uses actual internal names from schema (grp_ prefix)
+// KRA readable labels - uses actual internal names from schema (grp_ prefix)
 const KRA_LABELS = {
   grp_session:                              'Session & Program Execution',
   grp_lab_operations_management:            'Lab Operations & Management',
@@ -523,7 +523,7 @@ const STAFF_CODES = {
   '508':'Arundhati Jadhav','214':'Uday Kulkarni','721':'Bhagyshri Kumbhar',
   '772':'Siddhi Kadam','727':'Rudali Masaye','672':'Paresh Botle',
   '799':'Siddhi Lingayat','86':'Shiv Gaygol',
-  '2810':'__MANAGER__',  // manager — sees all staff
+  '2810':'__MANAGER__',  // manager - sees all staff
 };
 
 const WT_COLS = {
@@ -567,16 +567,16 @@ function parseD(v) {
 }
 function fmtDate(v) {
   const d = parseD(v);
-  if (!d) return String(v || '—').slice(0, 10);
+  if (!d) return String(v || '-').slice(0, 10);
   const [yr, mo, dy] = d.split('-');
   const M = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   return `${parseInt(dy)} ${M[parseInt(mo)-1]} ${yr}`;
 }
 function fmtHrs(mins) {
-  if (mins == null || isNaN(mins)) return '—';
+  if (mins == null || isNaN(mins)) return '-';
   return (mins / 60).toFixed(2);
 }
-// Format working type for display — remove underscores, proper case
+// Format working type for display - remove underscores, proper case
 function fmtWT(wt) {
   if (!wt) return '';
   return wt.replace(/_/g, ' ').replace(/\w/g, c => c.toUpperCase());
@@ -591,7 +591,7 @@ function wtBadge(wt) {
   return `<span class="badge" style="background:${c}18;color:${c};border:1px solid ${c}30">${esc(wt||'')}</span>`;
 }
 
-// ── Fetch — JSON API + form schema for exact field names ─────────
+// ── Fetch - JSON API + form schema for exact field names ─────────
 // Step 1: fetch the form schema to map labels → internal field names
 // Step 2: fetch all submission data from the JSON API
 // This avoids guessing internal names like "activity_task_done_001"
@@ -625,7 +625,7 @@ async function fetchAllPages() {
     const res = await fetch(PROXY + encodeURIComponent(url), {
       headers: { 'Authorization': `Token ${TOKEN}`, 'x-requested-with': 'XMLHttpRequest' }
     });
-    if (!res.ok) throw new Error(`API error ${res.status} — check token / asset UID`);
+    if (!res.ok) throw new Error(`API error ${res.status} - check token / asset UID`);
     const data = await res.json();
     results = results.concat(data.results || []);
     url = data.next || null;
@@ -648,7 +648,7 @@ const CANDS = {
 function detectFields() {
   const fm = {};
 
-  // ── Step 1: use schemaMap (label → exact internal name) — most reliable ──
+  // ── Step 1: use schemaMap (label → exact internal name) - most reliable ──
   const labelLookup = {
     name:        'Staff Name',
     date:        'Date',
@@ -742,7 +742,7 @@ function transformData() {
   console.log('durCols found:', durCols);
   console.log('kraSubCols found:', kraSubCols);
 
-  // Always use report_date — never _submission_time
+  // Always use report_date - never _submission_time
   const reportDateKey = allKeys.find(k => k === 'report_date' || k.endsWith('/report_date'));
   const dateField = reportDateKey || fieldMap.date;
   if (reportDateKey) fieldMap.date = reportDateKey;
@@ -840,7 +840,7 @@ function buildUserMap() {
 }
 
 function fillDropdown() {
-  // No dropdown — code-based login. Just ensure data is loaded.
+  // No dropdown - code-based login. Just ensure data is loaded.
   // userMap is built by buildUserMap() and used in doLogin()
 }
 
@@ -866,16 +866,16 @@ function doLogin() {
     const names = Object.keys(userMap).sort();
     staffSel.innerHTML = '<option value="">All Staff</option>' + names.map(n => `<option value="${n}">${n}</option>`).join('');
   }
-  // "Kunal Garge — Food Lab"
-  // Find lab — try fieldMap.lab and also any key containing 'employee_code'
+  // "Kunal Garge - Food Lab"
+  // Find lab - try fieldMap.lab and also any key containing 'employee_code'
   if (isManager) {
-    document.getElementById('welcomeName').textContent = 'Manager View — All Staff';
+    document.getElementById('welcomeName').textContent = 'Manager View - All Staff';
   } else {
     const labKey = fieldMap.lab || allKeys.find(k => k === 'employee_code' || k.endsWith('/employee_code'));
     const labVal = (userMap[name] || [])
       .map(r => String(r[labKey] || '').trim().replace(/_/g, ' '))
       .find(v => v) || '';
-    document.getElementById('welcomeName').textContent = labVal ? name + ' — ' + labVal : name;
+    document.getElementById('welcomeName').textContent = labVal ? name + ' - ' + labVal : name;
   }
   setDateDefaults();
   fillWTFilter();
@@ -913,7 +913,7 @@ function fillWTFilter() {
   sel.innerHTML = '<option value="">All Types</option>' + types.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join('');
 }
 
-// ── Filtering — applied to all three tables ───────────────
+// ── Filtering - applied to all three tables ───────────────
 function getFiltered() {
   const from = document.getElementById('dfrom').value;
   const to   = document.getElementById('dto').value;
@@ -997,17 +997,17 @@ function renderKPIs(records, activities, kra) {
   // Total Sessions = SUM('Karigar - Daily Reporting'[Number of Sessions])
   let ses = 0;
   records.forEach(r => { const v = parseFloat(gv(r, fieldMap.sessions)); if (!isNaN(v) && v > 0) ses += v; });
-  set('k2', ses || '—');
+  set('k2', ses || '-');
 
   // Count of Course(s) = COUNTA of non-blank Course(s)
-  set('k3', records.filter(r => String(gv(r, fieldMap.courses) || '').trim()).length || '—');
+  set('k3', records.filter(r => String(gv(r, fieldMap.courses) || '').trim()).length || '-');
 
-  // KRA Activities = COUNTROWS(KRA) — total unpivoted KRA rows
-  set('k4', kra.length || '—');
+  // KRA Activities = COUNTROWS(KRA) - total unpivoted KRA rows
+  set('k4', kra.length || '-');
 
-  // Reported Hours = DIVIDE(SUM(Activities[Duration > 0]), 60)  — mirrors DAX Reported Minutes
+  // Reported Hours = DIVIDE(SUM(Activities[Duration > 0]), 60)  - mirrors DAX Reported Minutes
   const totalM = activities.reduce((s, a) => s + (a.mins !== null && a.mins > 0 ? a.mins : 0), 0);
-  set('k5', totalM > 0 ? fmtHrs(totalM) : '—');
+  set('k5', totalM > 0 ? fmtHrs(totalM) : '-');
 }
 
 // ── Charts ────────────────────────────────────────────────
@@ -1122,12 +1122,12 @@ function renderTables(records, activities) {
     .sort((a, b) => parseD(String(gv(b, fieldMap.date)||'')).localeCompare(parseD(String(gv(a, fieldMap.date)||''))));
   // Exclude activities from records where Session & Program Execution is a KRA bucket
   // (those days are already captured in the Sessions & Courses table)
-  // Show ALL activities — grp_session has no activity_others column anyway
+  // Show ALL activities - grp_session has no activity_others column anyway
   // (session group only has num_sessions + course, captured in Sessions & Courses table)
   const sortedAct = [...activities]
     .sort((a, b) => parseD(b.date).localeCompare(parseD(a.date)));
 
-  // ── Sessions & Courses — columns matching Power BI exactly ──
+  // ── Sessions & Courses - columns matching Power BI exactly ──
   // Date | Staff Name | Course(s) | Other Course Name | Select Lab | Total Submissions | Active Work Days | Total Sessions
   const sb = document.getElementById('tSC');
   set('scCnt', sortedRec.length + ' rows');
@@ -1135,9 +1135,9 @@ function renderTables(records, activities) {
   const scRows = sortedRec.map(r => {
     const dt    = fmtDate(String(gv(r, fieldMap.date) || ''));
     const staff = currentUser;
-    const crs   = String(gv(r, fieldMap.courses)     || '—').replace(/_/g, ' ');
+    const crs   = String(gv(r, fieldMap.courses)     || '-').replace(/_/g, ' ');
     const other = String(gv(r, fieldMap.otherCourse) || '');
-    const lab   = String(gv(r, fieldMap.lab)         || '—');
+    const lab   = String(gv(r, fieldMap.lab)         || '-');
     const wt    = String(gv(r, fieldMap.workType)    || '').toLowerCase();
     const sesV  = parseFloat(gv(r, fieldMap.sessions));
     const ses   = !isNaN(sesV) && sesV > 0 ? sesV : 0;
@@ -1155,11 +1155,11 @@ function renderTables(records, activities) {
       <td style="text-align:right">${ses || ''}</td>
     </tr>`;
   });
-  // Total row — sums all three numeric columns
+  // Total row - sums all three numeric columns
   const scTotal = sortedRec.length
     ? `<tr style="font-weight:700;border-top:2px solid var(--b2)">
         <td colspan="3" style="padding:8px 12px">Total</td>
-        <td style="text-align:right;padding:8px 12px">${sumSessions || '—'}</td>
+        <td style="text-align:right;padding:8px 12px">${sumSessions || '-'}</td>
        </tr>` : '';
   sb.innerHTML = sortedRec.length
     ? scRows.join('') + scTotal
@@ -1199,7 +1199,7 @@ function renderTables(records, activities) {
   ab.innerHTML = actRows.length ? actRows.join('') + actTotal : `<tr><td colspan="4" class="empty">No activities found</td></tr>`;
 }
 
-// ── Excel download — 4 sheets matching Power BI tables ────
+// ── Excel download - 4 sheets matching Power BI tables ────
 function doDownload() {
   const { records, activities, kra } = getFiltered();
   if (!records.length) { alert('No data for selected filters.'); return; }
@@ -1211,7 +1211,7 @@ function doDownload() {
 
     // Summary
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([
-      ['Karigar Daily Report — ' + currentUser], [''],
+      ['Karigar Daily Report - ' + currentUser], [''],
       ['From', document.getElementById('dfrom').value],
       ['To',   document.getElementById('dto').value],
       ['Generated', new Date().toLocaleString()], [''],
@@ -1237,7 +1237,7 @@ function doDownload() {
       }))
     ), 'Sessions & Courses');
 
-    // Activities (expanded — one row per activity)
+    // Activities (expanded - one row per activity)
     const actSorted = [...activities].sort((a,b) => parseD(b.date).localeCompare(parseD(a.date)));
     if (actSorted.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(
       actSorted.map(a => ({
@@ -1250,7 +1250,7 @@ function doDownload() {
       }))
     ), 'Activities');
 
-    // KRA (expanded — one row per KRA bucket)
+    // KRA (expanded - one row per KRA bucket)
     const kraSorted = [...kra].sort((a,b) => parseD(b.date).localeCompare(parseD(a.date)));
     if (kraSorted.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(
       kraSorted.map(r => ({
@@ -1297,7 +1297,7 @@ async function fetchData() {
     const reportDatePath = allKeys.find(k => k === 'report_date' || k.endsWith('/report_date'));
     if (reportDatePath) fieldMap.date = reportDatePath;
 
-    // Fix kra field path — schema gives 'kra_bucket' but API uses 'active_work_group/kra_bucket'
+    // Fix kra field path - schema gives 'kra_bucket' but API uses 'active_work_group/kra_bucket'
     const kraFullPath = allKeys.find(k => k.endsWith('/kra_bucket'));
     if (kraFullPath) fieldMap.kra = kraFullPath;
 
@@ -1315,7 +1315,7 @@ async function fetchData() {
     document.getElementById('navSub').textContent = 'Personal Dashboard';
 
     if (!rawData.length) {
-      document.getElementById('bannerArea').innerHTML = `<div class="banner banner-ok">Connected — no submissions found yet.</div>`;
+      document.getElementById('bannerArea').innerHTML = `<div class="banner banner-ok">Connected - no submissions found yet.</div>`;
     }
   } catch(e) {
     document.getElementById('bannerArea').innerHTML = `<div class="banner banner-err"><strong>Failed to load:</strong> ${e.message}</div>`;
@@ -1387,7 +1387,7 @@ async function printPDF() {
   }
 }
 
-// Code input — focus styling
+// Code input - focus styling
 const ci = document.getElementById('codeInput');
 if (ci) {
   ci.addEventListener('focus', () => ci.style.borderColor = 'var(--accent)');
