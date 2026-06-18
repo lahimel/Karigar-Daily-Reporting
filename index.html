@@ -331,6 +331,12 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
     </div>
   </div>
 
+  <!-- Active chart filter chip -->
+  <div id="chartFilterChip" style="display:none;margin-bottom:14px;align-items:center;gap:8px">
+    <span style="font-size:11px;color:var(--muted)">Filtered by:</span>
+    <span id="chartFilterLabel" style="display:inline-flex;align-items:center;gap:6px;background:var(--warm2);color:var(--text);padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700;border:1px solid var(--warm3)"></span>
+    <button onclick="activeChartFilter=null;applyFilters()" style="background:none;border:none;cursor:pointer;color:var(--faint);font-size:12px;padding:2px 6px;border-radius:6px" title="Clear filter">✕ Clear</button>
+  </div>
   <!-- Tables -->
   <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px">
     <div class="slbl" style="margin:0">Submission Detail</div>
@@ -444,6 +450,7 @@ let userMap         = {};
 let currentUser     = null;
 let userData        = [];   // rawData filtered to current user
 let CHS             = {};
+let activeChartFilter = null; // {type:'wt'|'kra', value:'...'}
 
 // ── Helpers ───────────────────────────────────────────────
 const norm  = k => k.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -467,6 +474,11 @@ function fmtDate(v) {
 function fmtHrs(mins) {
   if (mins == null || isNaN(mins)) return '—';
   return (mins / 60).toFixed(2);
+}
+// Format working type for display — remove underscores, proper case
+function fmtWT(wt) {
+  if (!wt) return '';
+  return wt.replace(/_/g, ' ').replace(/\w/g, c => c.toUpperCase());
 }
 function wtColor(wt) {
   const n = (wt || '').toLowerCase().replace(/\s+/g, '');
@@ -790,11 +802,26 @@ function getFiltered() {
     return true;
   };
 
-  return {
-    records:    userData.filter(r => inRange(String(gv(r, fieldMap.date) || ''), String(gv(r, fieldMap.workType) || ''))),
-    activities: activitiesTable.filter(r => r.staffName === currentUser && inRange(r.date, r.workingType)),
-    kra:        kraTable.filter(r => r.staffName === currentUser && inRange(r.date, r.workingType)),
-  };
+  let recs = userData.filter(r => inRange(String(gv(r, fieldMap.date) || ''), String(gv(r, fieldMap.workType) || '')));
+  let acts = activitiesTable.filter(r => r.staffName === currentUser && inRange(r.date, r.workingType));
+  let kras = kraTable.filter(r => r.staffName === currentUser && inRange(r.date, r.workingType));
+
+  // Apply chart click filter
+  if (activeChartFilter?.type === 'wt') {
+    const v = activeChartFilter.value.toLowerCase();
+    recs = recs.filter(r => String(gv(r, fieldMap.workType)||'').toLowerCase() === v);
+    acts = acts.filter(a => a.workingType.toLowerCase() === v);
+    kras = kras.filter(k => k.workingType.toLowerCase() === v);
+  } else if (activeChartFilter?.type === 'kra') {
+    const kraUUIDs = new Set(kraTable
+      .filter(k => k.staffName === currentUser && k.kraBucket === activeChartFilter.value)
+      .map(k => k.uuid));
+    recs = recs.filter(r => kraUUIDs.has(String(r['_uuid']||'')));
+    acts = acts.filter(a => kraUUIDs.has(a.uuid));
+    kras = kras.filter(k => k.kraBucket === activeChartFilter.value);
+  }
+
+  return { records: recs, activities: acts, kra: kras };
 }
 
 function resetFilters() {
@@ -809,6 +836,17 @@ function applyFilters() {
   renderKPIs(records, activities, kra);
   renderCharts(records, kra);
   renderTables(records, activities);
+  // Show/hide active filter chip
+  const chip = document.getElementById('chartFilterChip');
+  const lbl  = document.getElementById('chartFilterLabel');
+  if (activeChartFilter && chip && lbl) {
+    chip.style.display = 'flex';
+    lbl.textContent = activeChartFilter.type === 'wt'
+      ? fmtWT(activeChartFilter.value)
+      : activeChartFilter.value;
+  } else if (chip) {
+    chip.style.display = 'none';
+  }
   // Stamp nav for print header
   const from = document.getElementById('dfrom').value || '';
   const to   = document.getElementById('dto').value   || '';
@@ -854,15 +892,39 @@ function renderCharts(records, kra) {
   });
   const pL = Object.keys(tMap), pD = Object.values(tMap);
   const pC = pL.map(l => wtColor(l));
+  const pLabels = pL.map(l => fmtWT(l)); // formatted: "comp_off" → "Comp Off"
   if (CHS.pie) CHS.pie.destroy();
   if (pD.length) {
     CHS.pie = new Chart(document.getElementById('pieC').getContext('2d'), {
       type: 'doughnut',
-      data: { labels: pL, datasets: [{ data: pD, backgroundColor: pC, borderWidth: 2, borderColor: '#fff', hoverOffset: 4 }] },
+      data: { labels: pLabels, datasets: [{ data: pD, backgroundColor: pC, borderWidth: 2, borderColor: '#fff', hoverOffset: 6 }] },
       options: {
         responsive: true, maintainAspectRatio: false, cutout: '55%',
+        cursor: 'pointer',
+        onClick: (evt, elements) => {
+          if (!elements.length) { activeChartFilter = null; applyFilters(); return; }
+          const rawWt = pL[elements[0].index];
+          if (activeChartFilter?.type === 'wt' && activeChartFilter?.value.toLowerCase() === rawWt.toLowerCase()) {
+            activeChartFilter = null; // click same → clear
+          } else {
+            activeChartFilter = { type: 'wt', value: rawWt };
+          }
+          applyFilters();
+        },
         plugins: {
-          legend: { position: 'bottom', labels: { boxWidth: 10, padding: 10, font: { size: 10 } } },
+          legend: {
+            position: 'bottom',
+            labels: { boxWidth: 10, padding: 10, font: { size: 10 } },
+            onClick: (evt, item, legend) => {
+              const rawWt = pL[item.index];
+              if (activeChartFilter?.type === 'wt' && activeChartFilter?.value.toLowerCase() === rawWt.toLowerCase()) {
+                activeChartFilter = null;
+              } else {
+                activeChartFilter = { type: 'wt', value: rawWt };
+              }
+              applyFilters();
+            }
+          },
           datalabels: {
             display: ctx => ctx.dataset.data[ctx.dataIndex] > 0,
             formatter: value => value,
@@ -892,7 +954,17 @@ function renderCharts(records, kra) {
       data: { labels: bL, datasets: [{ data: bD, backgroundColor: barColors, borderRadius: 3, barThickness: 18 }] },
       options: {
         indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-        layout: { padding: { right: 32 } },
+        layout: { padding: { right: 36 } },
+        onClick: (evt, elements) => {
+          if (!elements.length) { activeChartFilter = null; applyFilters(); return; }
+          const kra = bL[elements[0].index];
+          if (activeChartFilter?.type === 'kra' && activeChartFilter?.value === kra) {
+            activeChartFilter = null;
+          } else {
+            activeChartFilter = { type: 'kra', value: kra };
+          }
+          applyFilters();
+        },
         plugins: {
           legend: { display: false },
           tooltip: { callbacks: { title: items => [bL[items[0].dataIndex]] } },
