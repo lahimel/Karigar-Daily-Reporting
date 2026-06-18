@@ -312,14 +312,21 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
       <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
     </div>
     <h1>Daily Report</h1>
-    <p>Select your name to view your personal dashboard</p>
-    <div class="fg">
-      <label>Your Name</label>
-      <select id="nameSelect"><option value="">— Select name —</option></select>
+    <p>Enter your personal access code to view your dashboard</p>
+    <div class="fg" style="margin-bottom:10px">
+      <label style="text-align:center;display:block">Your Code</label>
+      <input type="tel" id="codeInput" inputmode="numeric" pattern="[0-9]*" maxlength="4"
+        placeholder="• • • •"
+        style="width:100%;padding:18px;text-align:center;font-size:36px;font-weight:800;
+               letter-spacing:12px;border:2px solid var(--b2);border-radius:12px;
+               background:var(--warm1);color:var(--text);outline:none;font-family:var(--mono);
+               transition:border .15s,box-shadow .15s"
+        oninput="document.getElementById('loginBtn').disabled=!this.value.trim()"
+        onkeydown="if(event.key==='Enter')doLogin()"/>
     </div>
     <button class="btn-login" id="loginBtn" onclick="doLogin()" disabled>View My Dashboard →</button>
     <div class="lerr" id="lerr"></div>
-    <p class="lnote">You will see only your own submissions</p>
+    <p class="lnote">Your code is unique to you — contact admin if you forgot it</p>
   </div>
 </div>
 
@@ -502,6 +509,16 @@ const KRA_LABELS = {
   student_innovation_support:               'Student Innovation Support',
   proposal_curriculum_nsqf:                 'Proposal/Curriculum/NSQF',
   others:                                   'Others',
+};
+
+// Staff code → name mapping (shared securely with each team member)
+const STAFF_CODES = {
+  '603':'Ganesh Salunkhe','533':'Swati Wani','343':'Rajesh S. Chavhan',
+  '824':'Manjokti Dongare','101':'Varun Devkule','615':'Kunal Garge',
+  '695':'Sagar Deshpande','102':'Suvarna Nagare','103':'Rutuja Rangade',
+  '508':'Arundhati Jadhav','214':'Uday Kulkarni','721':'Bhagyshri Kumbhar',
+  '772':'Siddhi Kadam','727':'Rudali Masaye','672':'Paresh Botle',
+  '799':'Siddhi Lingayat','86':'Shiv Gaygol',
 };
 
 const WT_COLS = {
@@ -817,18 +834,19 @@ function buildUserMap() {
 }
 
 function fillDropdown() {
-  const sel = document.getElementById('nameSelect');
-  const names = Object.keys(userMap).sort();
-  if (!names.length) { sel.innerHTML = '<option value="">No staff names found — contact admin</option>'; return; }
-  sel.innerHTML = '<option value="">— Select name —</option>' +
-    names.map(n => `<option value="${esc(n)}">${esc(n)} (${userMap[n].length} day${userMap[n].length !== 1 ? 's' : ''})</option>`).join('');
-  document.getElementById('loginBtn').disabled = false;
+  // No dropdown — code-based login. Just ensure data is loaded.
+  // userMap is built by buildUserMap() and used in doLogin()
 }
 
 // ── Login / Logout ────────────────────────────────────────
 function doLogin() {
-  const name = document.getElementById('nameSelect').value.trim();
-  if (!name) { const e = document.getElementById('lerr'); e.textContent = 'Please select your name.'; e.style.display = 'block'; return; }
+  const code = (document.getElementById('codeInput').value || '').trim();
+  const lerr = document.getElementById('lerr');
+  lerr.style.display = 'none';
+  if (!code) { lerr.textContent = 'Please enter your code.'; lerr.style.display = 'block'; return; }
+  const name = STAFF_CODES[code];
+  if (!name) { lerr.textContent = 'Invalid code. Please try again.'; lerr.style.display = 'block'; document.getElementById('codeInput').value=''; return; }
+  if (!userMap[name]) { lerr.textContent = 'No data found for this code. Contact admin.'; lerr.style.display = 'block'; return; }
   currentUser = name;
   userData = userMap[name] || [];
   document.getElementById('userChip').textContent = '👤 ' + name;
@@ -1331,9 +1349,12 @@ async function printPDF() {
   }
 }
 
-document.getElementById('nameSelect').addEventListener('change', function() {
-  document.getElementById('loginBtn').disabled = !this.value;
-});
+// Code input — focus styling
+const ci = document.getElementById('codeInput');
+if (ci) {
+  ci.addEventListener('focus', () => ci.style.borderColor = 'var(--accent)');
+  ci.addEventListener('blur',  () => ci.style.borderColor = 'var(--b2)');
+}
 window.onload = fetchData;
 </script>
 </body>
