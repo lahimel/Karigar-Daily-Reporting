@@ -479,16 +479,12 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 Chart.register(ChartDataLabels);
 
 // ── Config ────────────────────────────────────────────────
-// Multiple CORS proxies tried in order - if one is down/rate-limited/blocking
-// the Authorization header, the next one is tried automatically.
-const PROXIES = [
-  url => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url),
-  url => 'https://corsproxy.io/?url=' + encodeURIComponent(url),
-  url => 'https://thingproxy.freeboard.io/fetch/' + url,
-];
-const SERVER = 'https://eu.kobotoolbox.org';
-const TOKEN  = 'be8d9189ac085ed0345b12ee0ae622d4e93b3ba0';
+// Requests go through our own Vercel serverless proxy (api/kobo.js), which
+// attaches the Kobo API token server-side. The token is NOT stored here
+// anymore - it lives only in the Vercel project's KOBO_TOKEN env variable.
+const KOBO_PROXY = 'https://karigar-daily-reporting.vercel.app/api/kobo?path=';
 const UID    = 'aJeu3J4hsaeFAETZpKuXzV';
+
 
 // KRA readable labels - uses actual internal names from schema (grp_ prefix)
 const KRA_LABELS = {
@@ -602,29 +598,29 @@ function wtBadge(wt) {
 // Step 2: fetch all submission data from the JSON API
 // This avoids guessing internal names like "activity_task_done_001"
 
-// Tries each proxy in PROXIES in order; returns the first successful response.
-// Throws only if every proxy fails.
-async function fetchViaProxy(url, opts) {
-  let lastErr;
-  for (const buildProxyUrl of PROXIES) {
-    try {
-      const res = await fetch(buildProxyUrl(url), opts);
-      if (res.ok) return res;
-      lastErr = new Error(`Proxy returned ${res.status}`);
-    } catch (e) {
-      lastErr = e;
-    }
+// Calls our Vercel proxy (which attaches the Kobo token server-side) for a
+// given Kobo API path, e.g. "/api/v2/assets/UID/?format=json".
+async function fetchViaKoboProxy(path) {
+  const res = await fetch(KOBO_PROXY + encodeURIComponent(path));
+  if (!res.ok) throw new Error(`Proxy returned ${res.status}`);
+  return res;
+}
+
+// Kobo's pagination "next" field is a full absolute URL; strip it down to
+// just the path+query so it can be passed to our proxy's "path" param.
+function toKoboPath(urlOrPath) {
+  if (/^https?:\/\//i.test(urlOrPath)) {
+    const u = new URL(urlOrPath);
+    return u.pathname + u.search;
   }
-  throw lastErr || new Error('All proxies failed');
+  return urlOrPath;
 }
 
 async function fetchSchema() {
   // Returns map: "Activity/Task Done" → "activity_task_done" (whatever KoboToolbox calls it)
   try {
-    const url = `${SERVER}/api/v2/assets/${UID}/?format=json`;
-    const res = await fetchViaProxy(url, {
-      headers: { 'Authorization': `Token ${TOKEN}`, 'x-requested-with': 'XMLHttpRequest' }
-    });
+    const path = `/api/v2/assets/${UID}/?format=json`;
+    const res = await fetchViaKoboProxy(path);
     if (!res.ok) return {};
     const asset = await res.json();
     const map = {};
@@ -642,15 +638,13 @@ async function fetchSchema() {
 }
 
 async function fetchAllPages() {
-  let results = [], url = `${SERVER}/api/v2/assets/${UID}/data/?format=json&limit=100`;
-  while (url) {
-    const res = await fetchViaProxy(url, {
-      headers: { 'Authorization': `Token ${TOKEN}`, 'x-requested-with': 'XMLHttpRequest' }
-    });
-    if (!res.ok) throw new Error(`API error ${res.status} - check token / asset UID / all proxies down`);
+  let results = [], path = `/api/v2/assets/${UID}/data/?format=json&limit=100`;
+  while (path) {
+    const res = await fetchViaKoboProxy(path);
+    if (!res.ok) throw new Error(`API error ${res.status} - check proxy / token / asset UID`);
     const data = await res.json();
     results = results.concat(data.results || []);
-    url = data.next || null;
+    path = data.next ? toKoboPath(data.next) : null;
   }
   return results;
 }
