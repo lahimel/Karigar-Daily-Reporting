@@ -479,7 +479,13 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 Chart.register(ChartDataLabels);
 
 // ── Config ────────────────────────────────────────────────
-const PROXY  = 'https://corsproxy.io/?';
+// Multiple CORS proxies tried in order - if one is down/rate-limited/blocking
+// the Authorization header, the next one is tried automatically.
+const PROXIES = [
+  url => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url),
+  url => 'https://corsproxy.io/?url=' + encodeURIComponent(url),
+  url => 'https://thingproxy.freeboard.io/fetch/' + url,
+];
 const SERVER = 'https://eu.kobotoolbox.org';
 const TOKEN  = 'be8d9189ac085ed0345b12ee0ae622d4e93b3ba0';
 const UID    = 'aJeu3J4hsaeFAETZpKuXzV';
@@ -596,11 +602,27 @@ function wtBadge(wt) {
 // Step 2: fetch all submission data from the JSON API
 // This avoids guessing internal names like "activity_task_done_001"
 
+// Tries each proxy in PROXIES in order; returns the first successful response.
+// Throws only if every proxy fails.
+async function fetchViaProxy(url, opts) {
+  let lastErr;
+  for (const buildProxyUrl of PROXIES) {
+    try {
+      const res = await fetch(buildProxyUrl(url), opts);
+      if (res.ok) return res;
+      lastErr = new Error(`Proxy returned ${res.status}`);
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+  throw lastErr || new Error('All proxies failed');
+}
+
 async function fetchSchema() {
   // Returns map: "Activity/Task Done" → "activity_task_done" (whatever KoboToolbox calls it)
   try {
     const url = `${SERVER}/api/v2/assets/${UID}/?format=json`;
-    const res = await fetch(PROXY + encodeURIComponent(url), {
+    const res = await fetchViaProxy(url, {
       headers: { 'Authorization': `Token ${TOKEN}`, 'x-requested-with': 'XMLHttpRequest' }
     });
     if (!res.ok) return {};
@@ -622,10 +644,10 @@ async function fetchSchema() {
 async function fetchAllPages() {
   let results = [], url = `${SERVER}/api/v2/assets/${UID}/data/?format=json&limit=100`;
   while (url) {
-    const res = await fetch(PROXY + encodeURIComponent(url), {
+    const res = await fetchViaProxy(url, {
       headers: { 'Authorization': `Token ${TOKEN}`, 'x-requested-with': 'XMLHttpRequest' }
     });
-    if (!res.ok) throw new Error(`API error ${res.status} - check token / asset UID`);
+    if (!res.ok) throw new Error(`API error ${res.status} - check token / asset UID / all proxies down`);
     const data = await res.json();
     results = results.concat(data.results || []);
     url = data.next || null;
